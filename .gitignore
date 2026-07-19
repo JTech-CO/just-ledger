@@ -1,0 +1,53 @@
+# ── 의존성·빌드 산출물 (커밋 시 Linguist 통계 오염, 백서 §6) ──────────────
+node_modules/
+apps/web/**/dist/
+apps/web/**/.vite/
+
+# Go
+services/worker/bin/
+
+# Rust
+modules/statement-wasm/target/
+modules/statement-wasm/pkg/
+
+# Haskell
+modules/rules-dsl/dist-newstyle/
+modules/rules-dsl/.stack-work/
+
+# Elixir / Erlang
+services/realtime/_build/
+services/realtime/deps/
+services/realtime/*.ez
+
+# COBOL 산출 바이너리
+modules/settlement/bin/
+
+# R / Julia 로컬 상태
+modules/analytics/.Rproj.user/
+modules/simulation/Manifest.toml
+
+# ── 시크릿·환경 ──────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── 툴 캐시 ──────────────────────────────────────────────────────────────
+.pnpm-store/
+.cargo/
+.cabal/
+.julia/
+
+# ── OS / 에디터 ──────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# ── 런타임 산출물 ────────────────────────────────────────────────────────
+*.log
+report_artifacts/
+tmp/

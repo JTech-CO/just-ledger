@@ -1,0 +1,71 @@
+# just-ledger 단일 스택 (기술 백서 §2.1).
+#   상시: db(PostgreSQL) + web + worker + prolog + realtime
+#   배치(cobol/haskell/r/julia)는 worker 가 subprocess 로 기동하므로 서비스로 두지 않는다.
+#
+# M0 시점: 네 앱 서비스의 소스는 아직 없다. `docker compose build` 는 공용 dev 이미지를
+# 1회 빌드한다. 앱 서비스의 실제 기동(스모크)은 각 모듈이 착수된 이후(M9)에 검증한다.
+
+name: just-ledger
+
+# 네 앱 서비스는 동일한 dev 이미지를 공유한다(compose 가 1회만 빌드).
+x-app: &app
+  image: just-ledger-dev:local
+  build:
+    context: ..
+    dockerfile: infra/devcontainer/Dockerfile
+    target: dev
+  working_dir: /workspace
+  volumes:
+    - ..:/workspace
+  environment:
+    DATABASE_URL: postgres://ledger:${POSTGRES_PASSWORD:-ledger}@db:5432/ledger
+    LANG: ko_KR.UTF-8
+    LC_ALL: ko_KR.UTF-8
+    TZ: Asia/Seoul
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ledger
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ledger}
+      POSTGRES_DB: ledger
+    command: >-
+      postgres -c max_connections=50
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledger -d ledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  web:
+    <<: *app
+    command: ["sh", "-c", "cd apps/web && pnpm start"]
+    ports:
+      - "3000:3000"
+
+  worker:
+    <<: *app
+    command: ["services/worker/bin/worker"]
+
+  prolog:
+    <<: *app
+    command: ["swipl", "services/prolog/service.prolog"]
+    ports:
+      - "7070:7070"
+
+  realtime:
+    <<: *app
+    command: ["sh", "-c", "cd services/realtime && MIX_ENV=prod mix phx.server"]
+    ports:
+      - "4000:4000"
+
+volumes:
+  pgdata:

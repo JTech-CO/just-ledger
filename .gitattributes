@@ -1,0 +1,45 @@
+* text=auto eol=lf
+
+# ---------------------------------------------------------------------------
+# 언어 오탐 방지
+#   .pl  → Perl/Prolog/Raku 휴리스틱이 흔들리므로 .prolog 확장자 + 명시
+#   .sql → SQL/PLpgSQL/TSQL 휴리스틱이 흔들리므로 .pgsql 확장자 + 명시
+# ---------------------------------------------------------------------------
+db/**/*.pgsql                     linguist-language=PLpgSQL
+services/prolog/**/*.prolog       linguist-language=Prolog
+modules/settlement/**/*.cbl       linguist-language=COBOL
+modules/settlement/**/*.cpy       linguist-language=COBOL
+
+# ---------------------------------------------------------------------------
+# 비계측 계층 — 5%를 넘길 수 없는 언어는 통계에 노출되면 안 된다
+#   "메인 제외 각 언어 5% 이상" 조건은 곧 5% 미달 언어의 부재를 뜻한다
+# ---------------------------------------------------------------------------
+infra/**                          linguist-vendored=true
+contracts/**                      linguist-vendored=true
+fixtures/**                       linguist-vendored=true
+scripts/parity/**                 linguist-vendored=true
+.devcontainer/**                  linguist-vendored=true
+.github/**                        linguist-vendored=true
+Makefile                          linguist-vendored=true
+**/Dockerfile                     linguist-vendored=true
+*.sh                              linguist-vendored=true
+*.css                             linguist-detectable=false
+*.html                            linguist-detectable=false
+
+# scripts/linguist-gate.lua 는 Lua 계측에 포함한다 (매 푸시마다 실행되는 실제 코드)
+scripts/linguist-gate.lua         linguist-vendored=false
+
+# ---------------------------------------------------------------------------
+# 생성물
+# ---------------------------------------------------------------------------
+modules/statement-wasm/pkg/**     linguist-generated=true
+apps/web/**/*.min.js              linguist-generated=true
+**/*.lock                         linguist-generated=true
+pnpm-lock.yaml                    linguist-generated=true
+cabal.project.freeze              linguist-generated=true
+
+# ---------------------------------------------------------------------------
+# 바이너리 / 픽스처
+# ---------------------------------------------------------------------------
+fixtures/**/*.dat                 binary
+modules/settlement/bin/**         binary

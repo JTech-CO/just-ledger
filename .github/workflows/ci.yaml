@@ -1,0 +1,281 @@
+name: ci
+
+# 경로 변경 기반 매트릭스 (M0 DoD 4).
+# 언어 잡은 (자기 소유 디렉터리 또는 contracts/ 가 바뀌었고) AND (그 모듈의 소스가 존재할 때)만 실행된다.
+#   - contracts/ 는 언어 간 단일 진실원천이므로 변경 시 모든 소비 모듈을 재검증 대상으로 올린다.
+#   - 소스 존재(매니페스트) 게이트 덕분에 아직 착수 전인 모듈 잡은 스킵되고(M0에서 그린),
+#     해당 phase 에서 코드가 들어오는 순간 자동으로 켜진다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── 변경 경로 + 소스 존재 감지 ────────────────────────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+      lua: ${{ steps.filter.outputs.lua }}
+      web: ${{ steps.filter.outputs.web }}
+      worker: ${{ steps.filter.outputs.worker }}
+      prolog: ${{ steps.filter.outputs.prolog }}
+      realtime: ${{ steps.filter.outputs.realtime }}
+      wasm: ${{ steps.filter.outputs.wasm }}
+      dsl: ${{ steps.filter.outputs.dsl }}
+      settlement: ${{ steps.filter.outputs.settlement }}
+      analytics: ${{ steps.filter.outputs.analytics }}
+      simulation: ${{ steps.filter.outputs.simulation }}
+      db: ${{ steps.filter.outputs.db }}
+      web_src: ${{ steps.src.outputs.web }}
+      worker_src: ${{ steps.src.outputs.worker }}
+      prolog_src: ${{ steps.src.outputs.prolog }}
+      realtime_src: ${{ steps.src.outputs.realtime }}
+      wasm_src: ${{ steps.src.outputs.wasm }}
+      dsl_src: ${{ steps.src.outputs.dsl }}
+      settlement_src: ${{ steps.src.outputs.settlement }}
+      analytics_src: ${{ steps.src.outputs.analytics }}
+      simulation_src: ${{ steps.src.outputs.simulation }}
+      db_src: ${{ steps.src.outputs.db }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            contracts: &contracts
+              - 'contracts/**'
+            web:
+              - *contracts
+              - 'apps/web/**'
+            worker:
+              - *contracts
+              - 'services/worker/**'
+            prolog:
+              - *contracts
+              - 'services/prolog/**'
+            realtime:
+              - *contracts
+              - 'services/realtime/**'
+            wasm:
+              - *contracts
+              - 'modules/statement-wasm/**'
+            dsl:
+              - *contracts
+              - 'modules/rules-dsl/**'
+            settlement:
+              - *contracts
+              - 'modules/settlement/**'
+            analytics:
+              - *contracts
+              - 'modules/analytics/**'
+            simulation:
+              - *contracts
+              - 'modules/simulation/**'
+            db:
+              - *contracts
+              - 'db/**'
+            lua:
+              - 'scripts/linguist-gate.lua'
+              - 'scripts/tests/**'
+              - 'services/worker/sandbox/**'
+      - name: 모듈 소스 존재 감지 (매니페스트)
+        id: src
+        run: |
+          exists() { find "$1" -maxdepth 2 -name "$2" 2>/dev/null | grep -q . && echo true || echo false; }
+          {
+            echo "web=$([ -f apps/web/package.json ] && echo true || echo false)"
+            echo "worker=$([ -f services/worker/go.mod ] && echo true || echo false)"
+            echo "prolog=$(exists services/prolog '*.prolog')"
+            echo "realtime=$([ -f services/realtime/mix.exs ] && echo true || echo false)"
+            echo "wasm=$([ -f modules/statement-wasm/Cargo.toml ] && echo true || echo false)"
+            echo "dsl=$(exists modules/rules-dsl '*.cabal')"
+            echo "settlement=$(exists modules/settlement '*.cbl')"
+            echo "analytics=$([ -f modules/analytics/main.R ] && echo true || echo false)"
+            echo "simulation=$([ -f modules/simulation/Project.toml ] && echo true || echo false)"
+            echo "db=$(exists db '*.pgsql')"
+          } >> "$GITHUB_OUTPUT"
+
+  # ── 계약 검증 (변경 시 항상, 소스 게이트 없음 — 계약 자체가 소스) ──────────
+  contracts:
+    needs: changes
+    if: ${{ needs.changes.outputs.contracts == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }
+      - run: npm i --no-save ajv@8 ajv-formats@3
+      - run: node contracts/check.mjs
+
+  # ── JavaScript (web) ─────────────────────────────────────────────────────
+  web:
+    needs: changes
+    if: ${{ needs.changes.outputs.web == 'true' && needs.changes.outputs.web_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24', cache: 'pnpm', cache-dependency-path: apps/web/pnpm-lock.yaml }
+      - run: cd apps/web && pnpm install --frozen-lockfile
+      - run: cd apps/web && pnpm lint
+      - run: make check-no-float
+      - run: cd apps/web && pnpm build
+      - run: cd apps/web && pnpm test:api && pnpm test:ui
+
+  # ── Go (worker + Lua 샌드박스) ───────────────────────────────────────────
+  worker:
+    needs: changes
+    if: ${{ needs.changes.outputs.worker == 'true' && needs.changes.outputs.worker_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.26.5', cache-dependency-path: services/worker/go.sum }
+      - run: cd services/worker && go vet ./...
+      - run: cd services/worker && go build ./...
+      - run: cd services/worker && go test ./...
+
+  # ── Prolog (분류·매칭) ───────────────────────────────────────────────────
+  prolog:
+    needs: changes
+    if: ${{ needs.changes.outputs.prolog == 'true' && needs.changes.outputs.prolog_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y swi-prolog-nox
+      - run: swipl -g run_tests -t halt services/prolog/tests/suite.prolog
+
+  # ── Elixir (realtime) ────────────────────────────────────────────────────
+  realtime:
+    needs: changes
+    if: ${{ needs.changes.outputs.realtime == 'true' && needs.changes.outputs.realtime_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with: { otp-version: '27.3', elixir-version: '1.18.3' }
+      - run: cd services/realtime && mix deps.get
+      - run: cd services/realtime && mix format --check-formatted
+      - run: cd services/realtime && mix compile --warnings-as-errors
+      - run: cd services/realtime && mix test
+
+  # ── Rust WASM (인제스트 파서) ────────────────────────────────────────────
+  wasm:
+    needs: changes
+    if: ${{ needs.changes.outputs.wasm == 'true' && needs.changes.outputs.wasm_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown, components: clippy,rustfmt }
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - run: cd modules/statement-wasm && cargo fmt --check
+      - run: cd modules/statement-wasm && cargo clippy -- -D warnings
+      - run: cd modules/statement-wasm && cargo test
+      - run: cd modules/statement-wasm && wasm-pack build --target web --release
+
+  # ── Haskell (규칙 DSL) ───────────────────────────────────────────────────
+  dsl:
+    needs: changes
+    if: ${{ needs.changes.outputs.dsl == 'true' && needs.changes.outputs.dsl_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        with: { ghc-version: '9.8', cabal-version: '3.12' }
+      - run: cd modules/rules-dsl && cabal build
+      - run: cd modules/rules-dsl && cabal test
+
+  # ── COBOL (마감 정산) + 정합성 대조 ───────────────────────────────────────
+  settlement:
+    needs: changes
+    if: ${{ needs.changes.outputs.settlement == 'true' && needs.changes.outputs.settlement_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }
+      - run: sudo apt-get update && sudo apt-get install -y gnucobol
+      - run: make build-settlement
+      - run: make test-settlement
+      - run: make parity-settlement   # INV-7: COBOL ↔ JS 참조 구현 차이 0원
+
+  # ── R (분석) ─────────────────────────────────────────────────────────────
+  analytics:
+    needs: changes
+    if: ${{ needs.changes.outputs.analytics == 'true' && needs.changes.outputs.analytics_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with: { r-version: '4.5' }
+      - run: Rscript -e 'install.packages(c("ggplot2","jsonlite","svglite"), repos="https://cloud.r-project.org")'
+      - run: make test-analytics
+
+  # ── Julia (시뮬레이션) ───────────────────────────────────────────────────
+  simulation:
+    needs: changes
+    if: ${{ needs.changes.outputs.simulation == 'true' && needs.changes.outputs.simulation_src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with: { version: '1.11' }
+      - run: make test-simulation
+
+  # ── PLpgSQL (스키마·불변식) ──────────────────────────────────────────────
+  db:
+    needs: changes
+    if: ${{ needs.changes.outputs.db == 'true' && needs.changes.outputs.db_src == 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: ledger }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/ledger
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: make test-db
+
+  # ── Lua 게이트 스크립트 자체 검증 (게이트+테스트 파일은 항상 존재) ─────────
+  lua-gate:
+    needs: changes
+    if: ${{ needs.changes.outputs.lua == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y lua5.4 luarocks && sudo luarocks install dkjson
+      - run: lua5.4 scripts/tests/linguist-gate.test.lua
+
+  # ── 언어 구성 게이트 (M9 DoD). ────────────────────────────────────────────
+  # 게이트 로직은 완전히 강제되지만, M0~M8 동안은 계측 언어가 점증적으로 채워지므로
+  # 정당하게 실패한다(예: M0 에는 Lua 만 존재). 따라서 M9 전까지는 non-blocking(정보용).
+  # M9 에서 continue-on-error 를 제거해 강제 게이트로 전환한다(M9 DoD 4 음성 테스트 전제).
+  linguist:
+    runs-on: ubuntu-latest
+    continue-on-error: true   # TODO(M9): 제거 — 언어 구성 게이트를 강제로 전환
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: sudo apt-get update && sudo apt-get install -y lua5.4 luarocks cmake libicu-dev && sudo luarocks install dkjson
+      - run: sudo gem install github-linguist --no-document
+      - name: 언어 구성 게이트
+        run: |
+          github-linguist --json | lua5.4 scripts/linguist-gate.lua \
+            --main JavaScript --min 5.0 --max-main 35.0

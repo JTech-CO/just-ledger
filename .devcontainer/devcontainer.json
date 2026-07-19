@@ -1,0 +1,41 @@
+{
+  "name": "just-ledger",
+  "build": {
+    "dockerfile": "../infra/devcontainer/Dockerfile",
+    "context": "..",
+    "target": "dev"
+  },
+  "workspaceFolder": "/workspace",
+  "runArgs": ["--init"],
+  "mounts": [
+    "source=just-ledger-cargo,target=/root/.cargo/registry,type=volume",
+    "source=just-ledger-cabal,target=/root/.cabal,type=volume",
+    "source=just-ledger-julia,target=/root/.julia,type=volume",
+    "source=just-ledger-hex,target=/root/.hex,type=volume",
+    "source=just-ledger-pnpm,target=/root/.local/share/pnpm/store,type=volume"
+  ],
+  "containerEnv": {
+    "LANG": "ko_KR.UTF-8",
+    "LC_ALL": "ko_KR.UTF-8",
+    "TZ": "Asia/Seoul"
+  },
+  "forwardPorts": [3000, 4000, 5432, 7070],
+  "postCreateCommand": "make toolchain-check",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "golang.go",
+        "rust-lang.rust-analyzer",
+        "haskell.haskell",
+        "JakeBecker.elixir-ls",
+        "REditorSupport.r",
+        "julialang.language-julia",
+        "sumneko.lua",
+        "ms-ossdata.vscode-pgsql",
+        "bitlang.cobol",
+        "arthurwang.vsc-prolog"
+      ]
+    }
+  }
+}
