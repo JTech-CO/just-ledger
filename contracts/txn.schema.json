@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/txn.schema.json",
+  "title": "txn",
+  "description": "거래(전표). 데이터 모델 §2.3-2. entries를 함께 담아 원자적으로 생성한다. posted 이상 상태는 통화별 균형이 맞아야 한다 (INV-1). settled 기간은 불변 (INV-3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["occurred_on", "status", "entries"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "occurred_on": { "$ref": "common.schema.json#/$defs/date" },
+    "memo": {
+      "type": "string",
+      "maxLength": 512
+    },
+    "source_hash": {
+      "description": "BLAKE3 지문 (중복 제거 키). 16진 문자열. 수기 입력 거래는 없을 수 있다.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "batch_id": {
+      "description": "인제스트 배치 출처. 수기 입력은 null.",
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    },
+    "status": { "$ref": "common.schema.json#/$defs/txnStatus" },
+    "posted_at": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/timestamp" },
+        { "type": "null" }
+      ]
+    },
+    "entries": {
+      "description": "분개 행. 균형을 이루려면 최소 2행 필요.",
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "entry.schema.json" }
+    }
+  }
+}

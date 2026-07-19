@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/common.schema.json",
+  "title": "공통 정의 (single source of truth)",
+  "description": "11개 언어가 공유하는 원시 타입. 금액은 예외 없이 최소 화폐 단위 정수를 '문자열'로 표현한다 (BigInt는 JSON.stringify 불가, INV-4). 부동소수점 표현을 절대 두지 않는다.",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "currency": {
+      "description": "ISO 4217 alpha-3. DB CHAR(3).",
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "date": {
+      "description": "달력 날짜 YYYY-MM-DD (occurred_on 등).",
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "timestamp": {
+      "description": "RFC3339 / ISO8601 UTC 타임스탬프 (posted_at 등).",
+      "type": "string",
+      "format": "date-time"
+    },
+    "moneyMinor": {
+      "description": "부호 있는 최소 화폐 단위 정수를 문자열로. 잔액·증감 델타에 사용. 선행 0 금지. 최대 18자리로 i64/BIGINT 범위 안에 머문다(19자리는 i64 최대 9.22e18을 넘길 수 있어 금지).",
+      "type": "string",
+      "pattern": "^(0|-?[1-9][0-9]{0,17})$"
+    },
+    "positiveMinor": {
+      "description": "양의 최소 화폐 단위 정수 문자열. entry.amount_minor 전용 (INV-2: > 0, 부호는 direction이 담당). 최대 18자리(i64/BIGINT 안전 범위).",
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,17}$"
+    },
+    "ratio": {
+      "description": "환율은 실수가 아니라 유리수 쌍 num/den 으로 보관한다. 두 값 모두 최소단위 정수 문자열, den > 0.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["num", "den"],
+      "properties": {
+        "num": { "$ref": "#/$defs/moneyMinor" },
+        "den": { "$ref": "#/$defs/positiveMinor" }
+      }
+    },
+    "accountType": {
+      "type": "string",
+      "enum": ["asset", "liability", "equity", "income", "expense"]
+    },
+    "txnStatus": {
+      "description": "draft → classified → posted → settled. posted 이상은 INV-1 균형 검사 대상, settled는 INV-3 불변.",
+      "type": "string",
+      "enum": ["draft", "classified", "posted", "settled"]
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["debit", "credit"]
+    },
+    "ruleSource": {
+      "type": "string",
+      "enum": ["manual", "prolog", "lua", "haskell"]
+    },
+    "ingestState": {
+      "type": "string",
+      "enum": ["received", "parsing", "deduping", "drafting", "done", "failed"]
+    }
+  }
+}

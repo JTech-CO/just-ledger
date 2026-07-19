@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/entry.schema.json",
+  "title": "entry",
+  "description": "분개 행. 데이터 모델 §2.3-3. amount_minor는 항상 양수 문자열이고 부호는 direction이 담당한다 (INV-2). 한 txn의 통화별 debit 합 = credit 합 (INV-1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["account_id", "direction", "amount_minor", "currency"],
+  "properties": {
+    "id": {
+      "description": "BIGSERIAL. 생성 응답에만 존재, 생성 요청에는 없다.",
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "txn_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "account_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "direction": { "$ref": "common.schema.json#/$defs/direction" },
+    "amount_minor": { "$ref": "common.schema.json#/$defs/positiveMinor" },
+    "currency": { "$ref": "common.schema.json#/$defs/currency" }
+  }
+}

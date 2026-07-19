@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/ingest-batch.schema.json",
+  "title": "ingest_batch",
+  "description": "명세서 인제스트 배치. 데이터 모델 §2.3-8. 업로드 페이로드는 클라이언트에서 암호화되며, 평문 상대처·적요는 서버에 도달하지 않는다 (INV-6).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "filename", "state"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "filename": {
+      "description": "원본 파일명(표시용). 서버는 이 값을 subprocess 인자로 넘기지 않는다 (§7 보안).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "row_count": {
+      "description": "파싱된 레코드 수. 파싱 완료 전에는 없을 수 있다.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "state": { "$ref": "common.schema.json#/$defs/ingestState" },
+    "started_at": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/timestamp" },
+        { "type": "null" }
+      ]
+    },
+    "finished_at": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/timestamp" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

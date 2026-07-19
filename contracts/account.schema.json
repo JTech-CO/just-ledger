@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/account.schema.json",
+  "title": "account",
+  "description": "복식부기 계정. 데이터 모델 §2.3-1. 잔액은 이 계약에 포함하지 않는다(파생값, 롤업 함수 산출).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "code", "name", "type", "currency", "is_closed"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "code": {
+      "description": "계정 과목 코드. 전역 유니크.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "type": { "$ref": "common.schema.json#/$defs/accountType" },
+    "currency": { "$ref": "common.schema.json#/$defs/currency" },
+    "parent_id": {
+      "description": "상위 계정 (계층 구조). 루트 계정은 null.",
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    },
+    "is_closed": {
+      "description": "마감된 계정 여부. 마감 계정에는 신규 entry를 붙일 수 없다.",
+      "type": "boolean"
+    }
+  }
+}

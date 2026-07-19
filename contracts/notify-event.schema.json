@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/notify-event.schema.json",
+  "title": "notify_event",
+  "description": "PostgreSQL NOTIFY → Elixir 채널 → 브라우저 store 로 흐르는 실시간 이벤트 프레임. store/ledgerStore.js applyRealtime 의 단일 진입점 계약. M1 DoD 6 / M7 검증 대상.",
+  "type": "object",
+  "required": ["type"],
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "row"],
+      "properties": {
+        "type": { "const": "balance_changed" },
+        "row": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["account_id", "currency", "balance_minor"],
+          "properties": {
+            "account_id": { "$ref": "common.schema.json#/$defs/uuid" },
+            "currency": { "$ref": "common.schema.json#/$defs/currency" },
+            "balance_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "period"],
+      "properties": {
+        "type": { "const": "settlement_done" },
+        "period": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "$ref": "common.schema.json#/$defs/date" },
+            "end": { "$ref": "common.schema.json#/$defs/date" }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "batch_id", "state"],
+      "properties": {
+        "type": { "const": "ingest_progress" },
+        "batch_id": { "$ref": "common.schema.json#/$defs/uuid" },
+        "state": { "$ref": "common.schema.json#/$defs/ingestState" },
+        "processed": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 0 }
+      }
+    }
+  ]
+}
