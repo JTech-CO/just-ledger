@@ -254,13 +254,14 @@ jobs:
       - run: make test-db
 
   # ── Lua 게이트 스크립트 자체 검증 (게이트+테스트 파일은 항상 존재) ─────────
+  # 골든 테스트는 require 로 판정 함수를 직접 검증하므로 dkjson 불필요(순수 Lua)
   lua-gate:
     needs: changes
     if: ${{ needs.changes.outputs.lua == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y lua5.4 luarocks && sudo luarocks install dkjson
+      - run: sudo apt-get update && sudo apt-get install -y lua5.4
       - run: lua5.4 scripts/tests/linguist-gate.test.lua
 
   # ── 언어 구성 게이트 (M9 DoD). ────────────────────────────────────────────
@@ -273,7 +274,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - run: sudo apt-get update && sudo apt-get install -y lua5.4 luarocks cmake libicu-dev && sudo luarocks install dkjson
+      # luarocks 는 기본이 5.1 트리 — --lua-version=5.4 필수 (PROGRESS 결정 로그 2026-07-21)
+      - run: sudo apt-get update && sudo apt-get install -y lua5.4 liblua5.4-dev luarocks cmake libicu-dev && sudo luarocks --lua-version=5.4 install dkjson
       - run: sudo gem install github-linguist --no-document
       - name: 언어 구성 게이트
         run: |
