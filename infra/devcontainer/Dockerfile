@@ -6,7 +6,8 @@
 # Elixir/Erlang은 공식 이미지에서 복사한다. Ubuntu 배포판 패키지는 버전이 낡고,
 # Erlang Solutions 저장소는 배포판별 경로가 자주 바뀐다.
 # ---------------------------------------------------------------------------
-ARG ELIXIR_IMAGE=hexpm/elixir:1.18.3-erlang-27.3.3-ubuntu-noble-20250529
+# 태그는 Docker Hub 실존 확인됨 (2026-07-21). 베이스(ubuntu:24.04=noble)와 glibc 호환 필수.
+ARG ELIXIR_IMAGE=hexpm/elixir:1.18.3-erlang-27.3.3-ubuntu-noble-20260509.1
 FROM ${ELIXIR_IMAGE} AS elixir-src
 
 # ---------------------------------------------------------------------------
@@ -97,7 +98,8 @@ RUN ln -sf /usr/local/lib/erlang/bin/* /usr/local/bin/ \
 # --- 11. Lua + LuaRocks ------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
       lua5.4 liblua5.4-dev luarocks \
- && luarocks install dkjson \
+ && luarocks --lua-version=5.4 install dkjson \
+ && lua5.4 -e 'require("dkjson")' \
  && rm -rf /var/lib/apt/lists/*
 
 # --- 12. PostgreSQL 클라이언트 ------------------------------------------------
