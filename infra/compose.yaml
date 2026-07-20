@@ -38,7 +38,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # postgres:18+ 는 상위 디렉터리 마운트를 요구한다 (메이저버전별 하위 디렉터리 구조,
+      # docker-library/postgres#1259). /var/lib/postgresql/data 로 마운트하면 기동 거부.
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ledger -d ledger"]
       interval: 5s
