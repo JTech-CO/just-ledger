@@ -6,7 +6,7 @@
 
 ## 현재 phase
 
-**M0 — 툴체인 및 스캐폴딩** (진행 중 — 스캐폴딩 완료, DoD 1 만 Docker 데몬 부재로 대기)
+**M0 — 툴체인 및 스캐폴딩** (사실상 완료 — DoD 1·2·3 통과, DoD 4 만 GitHub 원격 연결 후 실측 확인 대기)
 
 ---
 
@@ -23,34 +23,24 @@
 - **[M0] CI** `.github/workflows/ci.yaml`: 경로 매트릭스(paths-filter) + 모듈 소스 존재 게이트 → 착수 전 모듈 잡 자동 스킵. YAML 파싱 검증 통과(14 잡)
 - **[M0] 모듈별 `CLAUDE.md`** 11종(apps/web, services/{worker,worker/sandbox,prolog,realtime}, modules/{statement-wasm,rules-dsl,settlement,analytics,simulation}, db), `README.md`(언어 선정 근거표)
 - **[M0] 적대적 검증 워크플로**(5 렌즈) 실행 → 6건 발견, 전부 해소
+- **[M0] 툴체인 이미지 빌드 성공** (`just-ledger-dev:local`, 10.1GB, 12분) — 빌드 중 2건 수정: ① hexpm/elixir 태그 실존본(`…noble-20260509.1`)으로 교체 ② `luarocks --lua-version=5.4 install dkjson` (기본 5.1 트리에 설치되던 문제) + 빌드 시 `require` 스모크 검사 추가
+- **[M0] `make toolchain-check` 통과** (컨테이너 내부, 11개 전부 버전 출력·성공 종료) → **DoD 1 ✔**
+- **[M0] 게이트 스크립트 듀얼 모드 리팩터링**: 컨테이너 seccomp 에서 Lua `os.execute` 가 ENOSYS(38) 로 차단됨 → 테스트가 서브프로세스 없이 `require` 로 판정 함수를 직접 검증하도록 재작성. 컨테이너에서 골든 테스트 7/7 통과 + CLI 통과/위반 양 경로(exit 0/1) 실측 확인
+- **[M0] CI 툴체인 핀을 컨테이너 확정 버전에 정렬** (OTP 27.3.3 / GHC 9.10.3 / cabal 3.16.1.0 / R 4.3.3)
 
 ---
 
 ## 다음 할 일
 
-> **선행 블로커**: Docker 데몬 미기동(아래 *멈춤 기록* 참조). DoD 1 은 데몬이 떠야 진행 가능.
-
-1. **(사용자 조치 필요)** Docker Desktop 기동 — `com.docker.service`(Stopped/Manual)를 관리자 권한으로 시작. 세션이 비관리자라 UAC를 충족 불가.
-2. 데몬 기동 후: `docker build -f infra/devcontainer/Dockerfile --target dev -t just-ledger-dev:local .` (11개 툴체인, 최초 30~60분 예상)
-3. `docker run --rm -v "$PWD":/workspace -w /workspace just-ledger-dev:local make toolchain-check` → 11개 버전 출력·성공 종료 (M0 DoD 1)
-4. 실제 설치 버전을 **툴체인 상태** 표에 확정 기록 + 이미지 다이제스트 고정
-5. 컨테이너 안에서 `lua5.4 scripts/tests/linguist-gate.test.lua`, `node contracts/check.mjs` 재확인
-6. GitHub 원격 연결 시 CI 그린 확인(로컬에서 GitHub Actions 실행 불가) → M0 DoD 4 최종 확인
-7. M0 DoD 재점검 후 **M1(PostgreSQL/PLpgSQL)** 진입
+1. **(사용자 결정)** GitHub 원격 저장소 생성·연결 → push → CI 가 경로 매트릭스로 언어 잡을 분리 실행·스킵하는지 실측 (M0 DoD 4 최종 확인)
+2. DoD 4 확인 후 M0 를 게이트 통과로 표기하고 **M1(PostgreSQL/PLpgSQL)** 진입: `db/migrations` → 도메인 테이블 → CHECK → 이중분개 deferrable 트리거 → 롤업 → RLS → NOTIFY
+3. M1 착수 시 컨테이너 안에서 psql 로 로컬 PostgreSQL(compose `db` 서비스) 대상 `make test-db` 루프 구성
 
 ---
 
 ## 멈춤 기록 (STOP — HARNESS §3.2)
 
-| 항목 | 내용 |
-|---|---|
-| **증상** | `docker build` 실패: `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine … daemon is running` |
-| **재현** | 호스트(Windows 11)에서 `docker build …` 또는 `docker ps` |
-| **원인** | Docker CLI(29.6.1)는 설치됨. 그러나 `com.docker.service`(Docker Desktop Service)가 **Stopped/StartType=Manual**, docker 프로세스 없음. 서비스 시작은 **관리자 권한** 필요. 현재 세션은 비관리자(`IsInRole Administrator=False`)라 UAC 승인 불가 → 데몬 기동 불가 |
-| **시도한 것** | ① `Start-Process "Docker Desktop.exe"` ×2 (프로세스 미유지) ② 데몬 준비 6분 폴링 → 타임아웃 ③ 서비스/프로세스/WSL 상태 점검(모두 미기동) |
-| **가설** | 관리자 권한으로 `com.docker.service` 를 시작하거나 사용자가 Docker Desktop 을 직접 실행하면 해소 |
-| **영향 범위** | **M0 DoD 1(툴체인 이미지+toolchain-check)만** 블록. 나머지 M0 스캐폴딩·계약·CI·게이트는 완료·검증됨 |
-| **불변식 우회** | 없음 — 게이트를 낮추거나 위장하지 않음. 데몬 결정 대기 |
+(해소) 2026-07-20 Docker 데몬 미기동 블로커 — 사용자가 Docker Desktop 을 데스크톱 세션에서 직접 실행하여 해소(2026-07-21). 교훈: GUI 프론트엔드는 프로그램적 `Start-Process` 로 유지되지 않음, 권한 서비스(`com.docker.service`)만으로는 WSL 엔진이 기동되지 않음.
 
 ---
 
@@ -58,37 +48,37 @@
 
 | # | 질문 | 상태 |
 |---|---|---|
-| 0 | **Docker 데몬 기동 방식** — (a) 사용자가 Docker Desktop 수동 실행 (b) 관리자 UAC 승인으로 서비스 시작 (c) 이미지 빌드 보류하고 스캐폴딩만 확정 | **사용자 결정 대기** |
-| 1 | Erlang/Elixir 설치를 `hexpm/elixir` COPY vs Erlang Solutions apt | M0 실제 빌드로 판정(데몬 대기) |
-| 2 | GnuCOBOL 소스 빌드 vs 배포판 (`COMP-3` 재현성) | 소스 빌드 우선, 골든 픽스처 검증 |
+| 1 | ~~Erlang/Elixir 설치 방식~~ | **해소(2026-07-21)**: `hexpm/elixir` 멀티스테이지 COPY 성공 — 실존 태그 `1.18.3-erlang-27.3.3-ubuntu-noble-20260509.1` 로 고정, `mix local.hex/rebar` 정상 |
+| 2 | GnuCOBOL 소스 빌드 vs 배포판 (`COMP-3` 재현성) | 소스 빌드 3.2.0 설치 성공. `COMP-3` 바이트 재현성은 M5 골든 픽스처에서 최종 검증 |
 | 3 | 은행 CSV 골든 픽스처 3종 포맷 | M3 착수 전 결정 |
-| 4 | R 패키지 CRAN apt vs `renv` | M6 착수 전 결정 |
+| 4 | R 패키지 CRAN apt vs `renv` | M6 착수 전 결정 (R 4.3.3 확정을 전제로) |
 | 5 | 프로덕션 배포 대상 | M9 전까지 |
+| 6 | GitHub 원격 저장소 생성·연결 (M0 DoD 4 실측의 전제) | **사용자 결정 대기** |
 
 ---
 
 ## 툴체인 상태
 
-`make toolchain-check` 는 **아직 미실행**(Docker 데몬 대기). 아래는 Dockerfile/PROGRESS 초기 핀이며 확정값이 아니다.
+`make toolchain-check` **통과** (컨테이너 내부, 2026-07-21). 확정 버전:
 
-| 언어 | 초기 핀 후보 | 확정 버전 | 확인일 |
-|---|---|---|---|
-| Node.js | 24.16.0 | — | — |
-| Go | 1.26.5 | — | — |
-| Rust | stable (`rust-toolchain.toml`) | — | — |
-| GHC / cabal | recommended / latest (ghcup) | — | — |
-| GnuCOBOL (`cobc`) | 3.2 (소스 빌드) | — | — |
-| SWI-Prolog | ppa:swi-prolog/stable | — | — |
-| R | apt r-base (4.5.x) | — | — |
-| Julia | 1.11.5 | — | — |
-| Elixir / OTP | 1.18.3 / 27.3.3 | — | — |
-| Lua / LuaRocks | 5.4 | — | — |
-| PostgreSQL | 18 (client) | — | — |
-| github-linguist | 최신 gem | — | — |
+| 언어 | 확정 버전 | 확인일 |
+|---|---|---|
+| Node.js | v24.16.0 (+pnpm) | 2026-07-21 |
+| Go | 1.26.5 linux/amd64 | 2026-07-21 |
+| Rust / wasm-pack | rustc 1.97.1 / wasm-pack 0.15.0 (stable, 이미지에 고정. `rust-toolchain.toml` 은 M3 착수 시 1.97.1 로 도입) | 2026-07-21 |
+| GHC / cabal | 9.10.3 / 3.16.1.0 | 2026-07-21 |
+| GnuCOBOL (`cobc`) | 3.2.0 (소스 빌드) | 2026-07-21 |
+| SWI-Prolog | 10.0.2 | 2026-07-21 |
+| R | 4.3.3 (+ggplot2/jsonlite/svglite) | 2026-07-21 |
+| Julia | 1.11.5 (+Distributions/StatsBase/JSON3) | 2026-07-21 |
+| Elixir / OTP | 1.18.3 / 27.3.3 (erts-15.2.6) | 2026-07-21 |
+| Lua / LuaRocks | 5.4.6 / 3.8.0 (+dkjson 2.10, `--lua-version=5.4` 필수) | 2026-07-21 |
+| PostgreSQL | psql 18.4 (client; 서버는 compose `postgres:18`) | 2026-07-21 |
+| github-linguist | 9.6.0 | 2026-07-21 |
 
-**컨테이너 이미지 다이제스트**: (빌드 완료 시 기록) — `COMP-3` 재현성 때문에 반드시 다이제스트로 고정.
+**컨테이너 이미지**: `just-ledger-dev:local`, ImageID `sha256:6c5220f92a49b86b151dd7a42ada7bd2d34bbf477a548ffea1fe35aa125dbfc9` (10.1GB, 2026-07-21 빌드). `COMP-3` 재현성을 위해 레지스트리 푸시 시 다이제스트로 재고정한다.
 
-> 참고: 백서 §2.1 은 Node 22 LTS / PG 16 을 명시하나, 툴체인 결정(2026-07-20)에서 Node 24 / PG 18 로 상향했다(Dockerfile·CI 반영). 백서 개정은 M0 확정 후 별도 `docs:` 커밋으로.
+> 참고: 백서 §2.1/§3.1 은 Node 22 LTS / PG 16 / React 18 을 명시하나, 툴체인 확정(2026-07-21)에서 Node 24 / PG 18 로 상향했다(Dockerfile·CI 반영). CI 는 컨테이너 확정 버전(OTP 27.3.3, GHC 9.10.3, cabal 3.16.1.0, R 4.3.3)에 정렬됨. 백서 개정은 별도 `docs:` 커밋으로.
 
 ---
 
@@ -116,6 +106,10 @@
 | 2026-07-20 | **[M0] CI 언어 잡 = 경로변경 AND 모듈소스존재 게이트** | 착수 전 모듈(코드 부재)에서 빌드 잡이 오탐 실패하는 것 방지. 각 phase 코드 착수 시 자동 활성 |
 | 2026-07-20 | **[M0] `linguist` 게이트는 M9 전까지 non-blocking** | 계측 언어가 점증적으로 채워져 M0~M8 동안 정당하게 실패. 게이트 로직은 불변, 강제 시점만 M9. `continue-on-error` 는 M9 에서 제거 |
 | 2026-07-20 | **[M0] DoD 해석**: M0 = 툴체인 이미지+스캐폴딩+계약+CI 구조 | DoD 2·3의 "전체 빌드/lint 그린"은 모듈 코드가 있어야 성립. 빈 스텁으로 억지 통과는 'Hello world 모음집' 금지 원칙 위반. 언어별 빌드/테스트는 M1+ 에서 점증 그린 |
+| 2026-07-21 | **[M0] Elixir 는 hexpm 멀티스테이지 COPY 로 확정** (미결질문 #1 해소) | 실존 태그 고정 후 빌드·`mix local.hex` 정상. Erlang Solutions apt 불필요 |
+| 2026-07-21 | **[M0] luarocks 는 `--lua-version=5.4` 명시 필수** | Ubuntu luarocks 기본이 5.1 트리에 설치 → lua5.4 에서 모듈 미발견. Dockerfile 에 빌드 시 `require` 스모크 검사 추가로 회귀 차단 |
+| 2026-07-21 | **[M0] Lua 게이트를 듀얼 모드(CLI+require)로, 테스트는 서브프로세스 금지** | 컨테이너 seccomp 에서 `os.execute` 가 ENOSYS(38). 판정 로직을 순수 함수로 분리해 직접 검증 — 더 견고하고 이식성 있음 |
+| 2026-07-21 | **[M0] CI 툴체인 핀 = 컨테이너 확정 버전** (OTP 27.3.3/GHC 9.10.3/cabal 3.16.1.0/R 4.3.3) | 컨테이너가 정본. M6 골든 "바이트 동일" 전제상 R 버전 일치가 특히 중요 |
 
 ---
 
@@ -123,7 +117,7 @@
 
 | Phase | 상태 | 통과일 |
 |---|---|---|
-| M0 툴체인·스캐폴딩 | 진행 중 (스캐폴딩✔ / DoD1 데몬 대기) | — |
+| M0 툴체인·스캐폴딩 | DoD 1·2·3 ✔ / DoD 4 는 GitHub 원격 연결 후 실측 | — |
 | M1 데이터·영속화 | 대기 | — |
 | M2 API·서버 골격 | 대기 | — |
 | M3 인제스트 | 대기 | — |
