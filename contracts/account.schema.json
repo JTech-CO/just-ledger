@@ -9,7 +9,7 @@
   "properties": {
     "id": { "$ref": "common.schema.json#/$defs/uuid" },
     "code": {
-      "description": "계정 과목 코드. 전역 유니크.",
+      "description": "계정 과목 코드. 소유자 내 유니크(전역 아님 — 소유자 격리).",
       "type": "string",
       "minLength": 1,
       "maxLength": 32,
