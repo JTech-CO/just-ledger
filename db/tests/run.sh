@@ -22,8 +22,12 @@ step "0. 스크래치 DB 재생성 ($TEST_DB)"
 "${PSQL_ADMIN[@]}" -c "DROP DATABASE IF EXISTS ${TEST_DB} WITH (FORCE)"
 "${PSQL_ADMIN[@]}" -c "CREATE DATABASE ${TEST_DB}"
 
+# pg_dump 는 서버와 메이저 버전이 같거나 높아야 한다. 러너처럼 여러 버전이 깔린 환경에서는
+# PATH 의 pg_dump(구버전)가 서버(18)를 거부하므로, 설치된 것 중 최신 pg_dump 를 고른다.
+PG_DUMP="$(ls -1 /usr/lib/postgresql/*/bin/pg_dump 2>/dev/null | sort -V | tail -1)"
+PG_DUMP="${PG_DUMP:-pg_dump}"
 # pg_dump 18+ 는 덤프마다 무작위 \restrict/\unrestrict 토큰을 넣는다 — diff 전 제거.
-dump_schema() { pg_dump -s "$TEST_URL" | grep -vE '^\\(un)?restrict '; }
+dump_schema() { "$PG_DUMP" -s "$TEST_URL" | grep -vE '^\\(un)?restrict '; }
 
 step "1. 마이그레이션 up (1차)"
 "${PSQL_TEST[@]}" -q -f db/migrations/0001_init.up.pgsql
