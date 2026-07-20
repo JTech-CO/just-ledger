@@ -6,7 +6,9 @@
 
 ## 현재 phase
 
-**M0 — 툴체인 및 스캐폴딩** (사실상 완료 — DoD 1·2·3 통과, DoD 4 만 GitHub 원격 연결 후 실측 확인 대기)
+**M1 — 데이터 및 영속화 (PostgreSQL / PLpgSQL)** (착수 전)
+
+M0 는 2026-07-21 게이트 통과. DoD 4 실측: push `61ce0af` 의 CI 런(29776630994)에서 언어 잡 10개 전부 소스 게이트 스킵, changes/contracts/lua-gate 그린, linguist non-blocking, 전체 conclusion success.
 
 ---
 
@@ -32,9 +34,9 @@
 
 ## 다음 할 일
 
-1. **(사용자 결정)** GitHub 원격 저장소 생성·연결 → push → CI 가 경로 매트릭스로 언어 잡을 분리 실행·스킵하는지 실측 (M0 DoD 4 최종 확인)
-2. DoD 4 확인 후 M0 를 게이트 통과로 표기하고 **M1(PostgreSQL/PLpgSQL)** 진입: `db/migrations` → 도메인 테이블 → CHECK → 이중분개 deferrable 트리거 → 롤업 → RLS → NOTIFY
-3. M1 착수 시 컨테이너 안에서 psql 로 로컬 PostgreSQL(compose `db` 서비스) 대상 `make test-db` 루프 구성
+1. **M1 착수** (PLpgSQL 단일 언어 세션): `db/migrations` 마이그레이션 골격(up/down) → 도메인 테이블(account/txn/entry/fx_rate/…, 백서 §2.3) → `CHECK` 제약(INV-2) → 이중분개 **deferrable constraint trigger**(INV-1, `BEFORE` 금지) → settled 불변 트리거(INV-3) → transfer_link 부분 유니크(INV-5) → 잔액 롤업 함수 → 기간 집계 뷰 → RLS → `NOTIFY` 발행(계약 `notify-event` 준수)
+2. 테스트 하네스: compose `db` 서비스 기동 → `make test-db` — 무작위 100,000 txn 삽입 INV-1 위반 0 / 불균형 삽입 음성 테스트 / settled UPDATE·DELETE 거절 / 롤업=전수합산 일치 / NOTIFY 스키마 준수 (M1 DoD 1~6)
+3. M1 통과 후 M2(JavaScript API) 진입
 
 ---
 
@@ -53,7 +55,7 @@
 | 3 | 은행 CSV 골든 픽스처 3종 포맷 | M3 착수 전 결정 |
 | 4 | R 패키지 CRAN apt vs `renv` | M6 착수 전 결정 (R 4.3.3 확정을 전제로) |
 | 5 | 프로덕션 배포 대상 | M9 전까지 |
-| 6 | GitHub 원격 저장소 생성·연결 (M0 DoD 4 실측의 전제) | **사용자 결정 대기** |
+| 6 | ~~GitHub 원격 연결~~ | **해소(2026-07-21)**: `JTech-CO/just-ledger` push 완료, CI 실측 완료 |
 
 ---
 
@@ -117,8 +119,8 @@
 
 | Phase | 상태 | 통과일 |
 |---|---|---|
-| M0 툴체인·스캐폴딩 | DoD 1·2·3 ✔ / DoD 4 는 GitHub 원격 연결 후 실측 | — |
-| M1 데이터·영속화 | 대기 | — |
+| M0 툴체인·스캐폴딩 | **통과** (DoD 4: CI 런 29776630994 — 언어 잡 10개 스킵, changes/contracts/lua-gate 그린) | 2026-07-21 |
+| M1 데이터·영속화 | 다음 (착수 전) | — |
 | M2 API·서버 골격 | 대기 | — |
 | M3 인제스트 | 대기 | — |
 | M4 추론 | 대기 | — |
