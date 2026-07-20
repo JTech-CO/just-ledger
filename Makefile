@@ -83,8 +83,8 @@ build-realtime: ## Elixir — Phoenix 실시간
 test: test-db test-api test-ingest test-classify test-sandbox \
       test-settlement test-dsl test-analytics test-simulation test-realtime test-ui ## 전체 테스트
 
-test-db: ## M1 — 스키마·불변식 (INV-1,2,3,5)
-	psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/tests/run.pgsql
+test-db: ## M1 — 스키마·불변식 (INV-1,2,3,5) + 롤업·RLS·NOTIFY
+	bash db/tests/run.sh
 
 test-api: ## M2 — API 왕복 + 계약 검증
 	cd apps/web && pnpm test:api
