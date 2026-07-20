@@ -10,6 +10,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:   # 수동 전체 실행 (소스 있는 잡만) — CI 인프라 검증·M9 음성 테스트용
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -250,7 +251,14 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/ledger
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }   # db/tests/validate-notify.mjs (ajv 계약 검증)
+      # psql/pg_dump 는 서버(18)와 메이저 일치해야 한다 — 러너 기본 client(16)는 pg_dump 거부.
+      - name: postgresql-client-18 (pgdg)
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
       - run: make test-db
 
   # ── Lua 게이트 스크립트 자체 검증 (게이트+테스트 파일은 항상 존재) ─────────
