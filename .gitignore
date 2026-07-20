@@ -18,6 +18,7 @@ modules/rules-dsl/.stack-work/
 services/realtime/_build/
 services/realtime/deps/
 services/realtime/*.ez
+erl_crash.dump
 
 # COBOL 산출 바이너리
 modules/settlement/bin/
