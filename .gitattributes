@@ -34,6 +34,7 @@ scripts/linguist-gate.lua         linguist-vendored=false
 # ---------------------------------------------------------------------------
 modules/statement-wasm/pkg/**     linguist-generated=true
 apps/web/**/*.min.js              linguist-generated=true
+apps/web/types/*.gen.js           linguist-generated=true
 **/*.lock                         linguist-generated=true
 pnpm-lock.yaml                    linguist-generated=true
 cabal.project.freeze              linguist-generated=true

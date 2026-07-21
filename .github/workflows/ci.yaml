@@ -118,20 +118,39 @@ jobs:
       - run: node contracts/check.mjs
 
   # ── JavaScript (web) ─────────────────────────────────────────────────────
+  # test:api/test:ui 는 실제 PostgreSQL(스크래치 DB) 위에서 돈다 — db 잡과 동일 구성.
   web:
     needs: changes
     if: ${{ needs.changes.outputs.web == 'true' && needs.changes.outputs.web_src == 'true' }}
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: ledger }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/ledger
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with: { version: 11 }
       - uses: actions/setup-node@v4
         with: { node-version: '24', cache: 'pnpm', cache-dependency-path: apps/web/pnpm-lock.yaml }
+      # 테스트 헬퍼가 psql 로 마이그레이션을 적용한다 — 서버(18)와 클라이언트 정합
+      - name: postgresql-client-18 (pgdg)
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
       - run: cd apps/web && pnpm install --frozen-lockfile
       - run: cd apps/web && pnpm lint
       - run: make check-no-float
       - run: cd apps/web && pnpm build
-      - run: cd apps/web && pnpm test:api && pnpm test:ui
+      - run: cd apps/web && pnpm test:api
+      - run: cd apps/web && pnpm test:ui
 
   # ── Go (worker + Lua 샌드박스) ───────────────────────────────────────────
   worker:
