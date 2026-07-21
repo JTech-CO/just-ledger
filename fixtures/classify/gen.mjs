@@ -74,11 +74,32 @@ const UNKNOWNS = [
   ['희망세차장', 'unknown'], ['둥지공인중개사', 'unknown'],
 ];
 
+// 적대적 케이스 [상호, 정답, 부호] — 규칙 키워드를 라벨로 베낀 자기충족을 깨는 케이스:
+// 부분문자열 충돌, first-match 순서 함정, 음수 소득키워드(부호 결합 검증).
+// sign: '-' 지출(음수), '+' 소득(양수)
+const ADVERSARIAL = [
+  ['이자카야 강남점', 'food', '-'],       // '이자'(소득) 부분충돌 → 음수라 interest 아님, izakaya 규칙이 food
+  ['우리동네이자카야', 'food', '-'],
+  ['대출이자 자동납부', 'unknown', '-'],   // 음수 '이자' → income 규칙 미적용 → unknown (부호 결합 검증)
+  ['카드론이자', 'unknown', '-'],
+  ['주택담보대출이자', 'unknown', '-'],
+  ['급여가압류', 'unknown', '-'],          // 음수 '급여' → salary 아님
+  ['쿠팡이츠 주문', 'delivery', '-'],      // 순서 함정: 쿠팡(groceries)보다 쿠팡이츠 먼저
+  ['쿠팡와우 멤버십', 'subscription', '-'],// 순서 함정: 쿠팡와우(구독) 먼저
+  ['쿠팡 로켓배송', 'groceries', '-'],     // 순수 쿠팡 → groceries
+  ['예금이자 입금', 'interest', '+'],      // 양수 '이자' → interest (정상 소득)
+  ['급여 입금', 'salary', '+'],
+  ['성과상여금', 'salary', '+'],
+  ['세금환급', 'income_other', '+'],
+  ['유튜브 프리미엄', 'subscription', '-'],// '유튜브'가 문화(cult)로 안 새고 구독
+  ['넷플릭스 정기결제', 'subscription', '-'],
+];
+
 const SUFFIXES = ['', ' 강남점', ' 서울역점', ' 홍대점', ' 역삼점', ' 판교점'];
 
 const rows = [];
 let i = 0;
-// 브랜드 × 지점 변형으로 ~460건
+// 브랜드 × 지점 변형으로 ~445건
 outer:
 for (const [name, label] of BRANDS) {
   for (const sfx of SUFFIXES) {
@@ -90,10 +111,17 @@ for (const [name, label] of BRANDS) {
       : String(-(1000 + ((i * 7919) % 89000)));
     rows.push({ merchant: (name + sfx).trim(), amount_minor: amount, expected: label });
     i += 1;
-    if (rows.length >= 460) break outer;
+    if (rows.length >= 445) break outer;
   }
 }
-// 미지 상호 ×2 변형으로 ~40건
+// 적대적 케이스 (부호 지정) — 규칙 품질을 실제로 시험한다
+for (const [name, label, sign] of ADVERSARIAL) {
+  const mag = 3000 + ((i * 733) % 50000);
+  rows.push({ merchant: name, amount_minor: String(sign === '+' ? mag : -mag), expected: label });
+  i += 1;
+}
+
+// 미지 상호 ×2 변형으로 나머지 채움
 for (const [name, label] of UNKNOWNS) {
   for (const sfx of ['', ' 본점']) {
     rows.push({ merchant: (name + sfx).trim(), amount_minor: String(-(3000 + ((i * 733) % 50000))), expected: label });
@@ -108,5 +136,6 @@ if (out.length !== 500) {
 }
 const here = dirname(fileURLToPath(import.meta.url));
 writeFileSync(join(here, 'golden.jsonl'), out.map((r) => JSON.stringify(r)).join('\n') + '\n');
-const unknownCount = out.filter((r) => UNKNOWNS.some(([n]) => r.merchant.startsWith(n))).length;
-console.log(`golden.jsonl: ${out.length}건 (미지 상호 ${unknownCount}건 포함)`);
+const advCount = out.filter((r) => ADVERSARIAL.some(([n]) => r.merchant === n)).length;
+const unknownCount = out.filter((r) => r.expected === 'unknown').length;
+console.log(`golden.jsonl: ${out.length}건 (적대 ${advCount}·unknown ${unknownCount})`);

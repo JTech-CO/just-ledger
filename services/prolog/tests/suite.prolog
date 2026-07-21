@@ -93,6 +93,27 @@ test(thousand_items_under_one_second) :-
     % DoD 3: 1초 이내
     assertion(Elapsed < 1.0).
 
+%% 소득 키워드는 부호와 결합해야 한다 (적대 검증 발견의 회귀)
+test(income_keyword_requires_positive) :-
+    % 음수 '이자'(지출)는 interest(소득)가 아니어야 한다
+    classify_one('대출이자', -50000, Cat1, _, _),
+    assertion(Cat1 \== interest),
+    % 양수 '이자'(소득)는 interest
+    classify_one('예금이자', 1250, interest, _, _),
+    % 음수 '급여'는 salary 가 아니어야 한다
+    classify_one('급여가압류', -100000, Cat2, _, _),
+    assertion(Cat2 \== salary),
+    classify_one('급여', 3200000, salary, _, _).
+
+test(substring_collision_izakaya_is_food) :-
+    % '이자카야' 는 '이자' 부분충돌 없이 food (더 긴 키워드 우선 + 음수)
+    classify_one('이자카야', -30000, food, _, _).
+
+test(ordering_coupang_variants) :-
+    classify_one('쿠팡이츠', -20000, delivery, _, _),
+    classify_one('쿠팡와우멤버십', -4990, subscription, _, _),
+    classify_one('쿠팡', -35000, groceries, _, _).
+
 :- end_tests(classify_golden).
 
 :- begin_tests(transfer_matching).

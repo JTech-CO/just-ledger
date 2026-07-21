@@ -443,21 +443,21 @@
 {"merchant":"교보문고 역삼점","amount_minor":"-30198","expected":"culture"}
 {"merchant":"교보문고 판교점","amount_minor":"-38117","expected":"culture"}
 {"merchant":"예스24","amount_minor":"-46036","expected":"culture"}
-{"merchant":"예스24 강남점","amount_minor":"-53955","expected":"culture"}
-{"merchant":"예스24 서울역점","amount_minor":"-61874","expected":"culture"}
-{"merchant":"예스24 홍대점","amount_minor":"-69793","expected":"culture"}
-{"merchant":"예스24 역삼점","amount_minor":"-77712","expected":"culture"}
-{"merchant":"예스24 판교점","amount_minor":"-85631","expected":"culture"}
-{"merchant":"알라딘중고서점","amount_minor":"-4550","expected":"culture"}
-{"merchant":"알라딘중고서점 강남점","amount_minor":"-12469","expected":"culture"}
-{"merchant":"알라딘중고서점 서울역점","amount_minor":"-20388","expected":"culture"}
-{"merchant":"알라딘중고서점 홍대점","amount_minor":"-28307","expected":"culture"}
-{"merchant":"알라딘중고서점 역삼점","amount_minor":"-36226","expected":"culture"}
-{"merchant":"알라딘중고서점 판교점","amount_minor":"-44145","expected":"culture"}
-{"merchant":"유니클로","amount_minor":"-52064","expected":"clothing"}
-{"merchant":"유니클로 강남점","amount_minor":"-59983","expected":"clothing"}
-{"merchant":"유니클로 서울역점","amount_minor":"-67902","expected":"clothing"}
-{"merchant":"유니클로 홍대점","amount_minor":"-75821","expected":"clothing"}
+{"merchant":"이자카야 강남점","amount_minor":"-29185","expected":"food"}
+{"merchant":"우리동네이자카야","amount_minor":"-29918","expected":"food"}
+{"merchant":"대출이자 자동납부","amount_minor":"-30651","expected":"unknown"}
+{"merchant":"카드론이자","amount_minor":"-31384","expected":"unknown"}
+{"merchant":"주택담보대출이자","amount_minor":"-32117","expected":"unknown"}
+{"merchant":"급여가압류","amount_minor":"-32850","expected":"unknown"}
+{"merchant":"쿠팡이츠 주문","amount_minor":"-33583","expected":"delivery"}
+{"merchant":"쿠팡와우 멤버십","amount_minor":"-34316","expected":"subscription"}
+{"merchant":"쿠팡 로켓배송","amount_minor":"-35049","expected":"groceries"}
+{"merchant":"예금이자 입금","amount_minor":"35782","expected":"interest"}
+{"merchant":"급여 입금","amount_minor":"36515","expected":"salary"}
+{"merchant":"성과상여금","amount_minor":"37248","expected":"salary"}
+{"merchant":"세금환급","amount_minor":"37981","expected":"income_other"}
+{"merchant":"유튜브 프리미엄","amount_minor":"-38714","expected":"subscription"}
+{"merchant":"넷플릭스 정기결제","amount_minor":"-39447","expected":"subscription"}
 {"merchant":"달빛곱창","amount_minor":"-40180","expected":"food"}
 {"merchant":"달빛곱창 본점","amount_minor":"-40913","expected":"food"}
 {"merchant":"제이네과일가게","amount_minor":"-41646","expected":"groceries"}

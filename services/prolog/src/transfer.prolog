@@ -24,24 +24,28 @@ date_to_days(DateS, Days) :-
 %% Items: [_{txn_id, account_id, amount_minor, occurred_on, linked}, ...]
 %% Pairs: [_{txn_a, txn_b, confidence, matched_by}, ...] (txn_a @< txn_b 정규화)
 transfer_pairs(Items, Pairs) :-
-    maplist(to_fact, Items, Facts),
+    % 나쁜 항목 1건이 배치 전체를 무효화하지 않도록, 사실화 실패는 조용히 건너뛴다.
+    % (0원·비정수 금액·형식이탈 날짜·링크된 txn 은 매칭 후보에서 빠질 뿐)
+    foldl(collect_fact, Items, [], Facts),
     findall(P, mutual_unique_pair(Facts, P), Pairs0),
     sort(Pairs0, Pairs).
 
-to_fact(Item, Fact) :-
-    get_dict(linked, Item, Linked),
-    (   Linked == true
-    ->  Fact = skip                % 이미 링크된 txn 은 후보에서 제외 (INV-5)
-    ;   get_dict(txn_id, Item, Id),
-        get_dict(account_id, Item, Acct),
-        get_dict(amount_minor, Item, AmtS),
-        number_string(Amount, AmtS),
-        integer(Amount),
-        Amount =\= 0,
-        get_dict(occurred_on, Item, DateS),
-        date_to_days(DateS, Days),
-        Fact = t(Id, Acct, Amount, Days)
+collect_fact(Item, Acc, Acc1) :-
+    (   to_fact(Item, Fact)
+    ->  Acc1 = [Fact | Acc]
+    ;   Acc1 = Acc
     ).
+
+to_fact(Item, t(Id, Acct, Amount, Days)) :-
+    get_dict(linked, Item, false),     % 링크된 txn 은 후보 제외 (INV-5) — false 아니면 실패=스킵
+    get_dict(txn_id, Item, Id),
+    get_dict(account_id, Item, Acct),
+    get_dict(amount_minor, Item, AmtS),
+    number_string(Amount, AmtS),
+    integer(Amount),
+    Amount =\= 0,
+    get_dict(occurred_on, Item, DateS),
+    date_to_days(DateS, Days).
 
 %% 백서 술어: 절대금액 일치·부호 반대·다른 계좌·3일 이내
 candidate(Facts, t(IdA, AcctA, AmtA, DayA), t(IdB, AcctB, AmtB, DayB)) :-

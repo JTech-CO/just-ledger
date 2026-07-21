@@ -3,7 +3,7 @@
 %% merchant 는 클라이언트에서 정규화됨(NFKC·공백축약·접두어 제거·소문자) —
 %% 키워드는 그 정규형 기준으로 작성한다. 근거 규칙명은 응답에 반드시 실린다 (DoD 6).
 
-:- module(rules, [keyword_rule/4, category/1]).
+:- module(rules, [keyword_rule/4, income_rule/4, category/1]).
 
 %% 카테고리 체계 (계약 inference.schema.json category 슬러그)
 category(cafe).          category(food).         category(convenience).
@@ -72,6 +72,9 @@ keyword_rule(food_pizza,      food, "피자", 80).
 keyword_rule(food_restaurant, food, "식당", 75).
 keyword_rule(food_gogi,       food, "고기", 70).
 keyword_rule(food_bunsik,     food, "분식", 80).
+keyword_rule(food_izakaya,    food, "이자카야", 85).   % '이자'(이자소득) 부분충돌 방지 — 더 긴 키워드가 먼저
+keyword_rule(food_pocha,      food, "포차", 80).
+keyword_rule(food_hof,        food, "호프", 75).
 
 %% ── 편의점 ───────────────────────────────────────────────────────────────
 keyword_rule(cvs_gs25,        convenience, "gs25", 95).
@@ -167,11 +170,21 @@ keyword_rule(ins_kb,          insurance, "kb손해보험", 90).
 keyword_rule(ins_word,        insurance, "보험", 80).
 keyword_rule(fee_word,        finance_fee, "수수료", 85).
 
-%% ── 입금 계열 (양수 금액 전용 규칙은 classify 에서 부호 검사와 결합) ─────────
-keyword_rule(income_salary,   salary, "급여", 95).
-keyword_rule(income_salary2,  salary, "월급", 95).
-keyword_rule(income_interest, interest, "이자", 90).
-
 %% ── 현금·이체 ───────────────────────────────────────────────────────────
 keyword_rule(atm_word,        atm, "atm", 90).
 keyword_rule(atm_cd,          atm, "현금인출", 95).
+
+%% ── 입금(양수) 전용 규칙: income_rule/4 ──────────────────────────────────
+%% classify 는 Amount > 0 일 때만 이 규칙을 시도한다. 부호와 결합하지 않으면
+%% 음수 '대출이자'(지출)가 interest(소득)로, '급여가압류'가 salary 로 뒤집힌다
+%% — 원장 부호 의미를 파괴하는 오분류다 (적대 검증 발견).
+%% '이자'/'급여' 는 부분문자열이라, 지출 계열에서 이자카야·이자녹스 등과 충돌하지
+%% 않도록 income_rule 은 반드시 Amount>0 게이트 뒤에서만 시도된다.
+income_rule(income_salary,   salary,       "급여", 95).
+income_rule(income_salary2,  salary,       "월급", 95).
+income_rule(income_bonus,    salary,       "상여", 90).
+income_rule(income_pay,      salary,       "임금", 85).
+income_rule(income_interest, interest,     "이자", 90).
+income_rule(income_dividend, income_other, "배당", 85).
+income_rule(income_refund,   income_other, "환급", 80).
+income_rule(income_return,   income_other, "환불", 75).

@@ -7,10 +7,17 @@
 :- use_module(rules).
 
 %% classify_one(+MerchantAtom, +AmountMinorInt, -Category, -RuleName, -Confidence)
+%% 우선순위: 지출(keyword) 규칙 → (양수일 때만) 소득(income) 규칙 → 부호 폴백.
+%% 소득 규칙을 부호 뒤에 두는 이유: '이자'/'급여' 는 부분문자열이라, 부호 없이
+%% 매칭하면 음수 '대출이자'(지출)를 interest(소득)로 뒤집는다 (적대 검증).
 classify_one(Merchant, Amount, Category, RuleName, Conf) :-
     (   keyword_rule(RuleName0, Cat0, Keyword, Conf0),
         sub_atom(Merchant, _, _, _, Keyword)
     ->  Category = Cat0, RuleName = RuleName0, Conf = Conf0
+    ;   Amount > 0,
+        income_rule(RuleName1, Cat1, Keyword1, Conf1),
+        sub_atom(Merchant, _, _, _, Keyword1)
+    ->  Category = Cat1, RuleName = RuleName1, Conf = Conf1
     ;   Amount > 0
     ->  Category = income_other, RuleName = positive_amount_fallback, Conf = 40
     ;   Category = unknown, RuleName = no_match, Conf = 0
