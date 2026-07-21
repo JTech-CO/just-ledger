@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/balance.schema.json",
+  "title": "balance_row",
+  "description": "계정 × 통화 잔액 스냅샷. balance_minor = sum(debit) - sum(credit), posted 이상만 반영 (DB account_balance 산출). 실시간 balance_changed 이벤트의 row 와 잔액 조회 응답이 공유하는 단일 형태.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["account_id", "currency", "balance_minor"],
+  "properties": {
+    "account_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "currency": { "$ref": "common.schema.json#/$defs/currency" },
+    "balance_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" }
+  }
+}

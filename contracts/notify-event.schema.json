@@ -12,16 +12,7 @@
       "required": ["type", "row"],
       "properties": {
         "type": { "const": "balance_changed" },
-        "row": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["account_id", "currency", "balance_minor"],
-          "properties": {
-            "account_id": { "$ref": "common.schema.json#/$defs/uuid" },
-            "currency": { "$ref": "common.schema.json#/$defs/currency" },
-            "balance_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" }
-          }
-        }
+        "row": { "$ref": "balance.schema.json" }
       }
     },
     {
