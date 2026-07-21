@@ -42,7 +42,9 @@ CREATE TABLE account (
   UNIQUE (owner_id, code),
   -- entry 가 (account_id, currency) 복합 FK 로 "entry 통화 = 계정 통화"를
   -- 선언적으로 강제할 수 있도록 유니크를 둔다.
-  UNIQUE (id, currency)
+  UNIQUE (id, currency),
+  -- (계정, 소유자) 복합 FK 용 — 크로스 테넌트 참조를 선언적으로 차단 (txn 과 동일 패턴)
+  UNIQUE (id, owner_id)
 );
 CREATE INDEX idx_account_owner  ON account (owner_id);
 CREATE INDEX idx_account_parent ON account (parent_id) WHERE parent_id IS NOT NULL;
@@ -133,13 +135,25 @@ CREATE INDEX idx_automation_owner ON automation_script (owner_id);
 CREATE TABLE ingest_batch (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id    uuid NOT NULL REFERENCES app_user(id),
+  -- 이 명세서가 속한 은행 계정 (draft txn 의 한쪽 다리). 복합 FK 로 소유자 일치 강제.
+  account_id  uuid,
   filename    text NOT NULL CHECK (length(filename) BETWEEN 1 AND 255),
   row_count   integer CHECK (row_count >= 0),
   state       ingest_state NOT NULL DEFAULT 'received',
   started_at  timestamptz,
-  finished_at timestamptz
+  finished_at timestamptz,
+  FOREIGN KEY (account_id, owner_id) REFERENCES account (id, owner_id)
 );
 CREATE INDEX idx_ingest_owner ON ingest_batch (owner_id);
+CREATE INDEX idx_ingest_state ON ingest_batch (state) WHERE state NOT IN ('done', 'failed');
+
+-- 업로드 봉투 보관 (contracts/ingest-payload.schema.json 전체).
+-- cipher.blob 은 클라이언트만 복호화 가능(INV-6) — 이후 표시(M8)를 위해 보존한다.
+-- records 최소 필드(지문·일자·금액)는 워커의 draft 생성 입력이다.
+CREATE TABLE ingest_payload (
+  batch_id uuid PRIMARY KEY REFERENCES ingest_batch(id) ON DELETE CASCADE,
+  payload  jsonb NOT NULL
+);
 
 ALTER TABLE txn
   ADD CONSTRAINT txn_batch_fk FOREIGN KEY (batch_id) REFERENCES ingest_batch(id);
@@ -254,11 +268,15 @@ BEGIN
   END IF;
 END $$;
 
+-- 워커 지원 함수 (역할 생성 이후에 적용해야 GRANT 가 성립한다)
+\ir ../functions/worker.pgsql
+
 -- web(app): 도메인 전반 CRUD (RLS 로 소유자 격리)
 GRANT SELECT, INSERT, UPDATE, DELETE ON
   account, txn, entry, category_rule, budget, automation_script,
   ingest_batch, transfer_link, report_artifact
   TO ledger_app;
+GRANT SELECT, INSERT ON ingest_payload TO ledger_app;
 GRANT SELECT ON app_user, fx_rate, settlement_run, account_balance,
                 transfer_link_member, v_period_totals TO ledger_app;
 
@@ -266,6 +284,7 @@ GRANT SELECT ON app_user, fx_rate, settlement_run, account_balance,
 GRANT SELECT, INSERT, UPDATE, DELETE ON
   txn, entry, ingest_batch, transfer_link, settlement_run, report_artifact
   TO ledger_worker;
+GRANT SELECT ON ingest_payload TO ledger_worker;
 GRANT SELECT, INSERT, UPDATE ON fx_rate TO ledger_worker;
 GRANT SELECT ON app_user, account, category_rule, budget, automation_script,
                 account_balance, transfer_link_member, v_period_totals TO ledger_worker;

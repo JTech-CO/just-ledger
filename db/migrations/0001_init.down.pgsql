@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS
   account_balance,
   entry,
   txn,
+  ingest_payload,
   ingest_batch,
   category_rule,
   budget,
@@ -47,6 +48,7 @@ DROP FUNCTION IF EXISTS
   fn_notify_entry_del(),
   fn_notify_ingest(),
   fn_notify_settlement(),
+  fn_pending_ingest_batches(),
   current_owner()
 CASCADE;
 

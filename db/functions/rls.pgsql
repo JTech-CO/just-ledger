@@ -62,6 +62,15 @@ CREATE POLICY p_owner_all ON transfer_link_member FOR ALL
   WITH CHECK (EXISTS (SELECT 1 FROM transfer_link l
                       WHERE l.id = transfer_link_member.link_id AND l.owner_id = current_owner()));
 
+-- ── ingest_payload: 소유권은 배치를 따른다 ───────────────────────────────
+ALTER TABLE ingest_payload ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS p_owner_all ON ingest_payload;
+CREATE POLICY p_owner_all ON ingest_payload FOR ALL
+  USING (EXISTS (SELECT 1 FROM ingest_batch b
+                 WHERE b.id = ingest_payload.batch_id AND b.owner_id = current_owner()))
+  WITH CHECK (EXISTS (SELECT 1 FROM ingest_batch b
+                      WHERE b.id = ingest_payload.batch_id AND b.owner_id = current_owner()));
+
 -- app_user: 자기 행만 조회 가능 (생성·관리는 M2 인증 경로에서 확정)
 ALTER TABLE app_user ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS p_self ON app_user;
