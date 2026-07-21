@@ -194,7 +194,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y swi-prolog-nox
+      # 컨테이너와 동일한 SWI-Prolog(ppa stable, 10.x) — 배포판 버전은 library(json)
+      # 등 라이브러리 경로가 달라 골든 로더가 깨진다 (잡 첫 활성화에서 노출)
+      - name: swi-prolog (ppa stable)
+        run: |
+          sudo apt-get update && sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:swi-prolog/stable
+          sudo apt-get update && sudo apt-get install -y swi-prolog-nox
       - run: swipl -g run_tests -t halt services/prolog/tests/suite.prolog
 
   # ── Elixir (realtime) ────────────────────────────────────────────────────
