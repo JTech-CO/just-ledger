@@ -1,0 +1,42 @@
+[
+  {
+    "amount_minor": "-35000",
+    "balance_minor": "215000",
+    "counterparty": "쿠팡",
+    "currency": "KRW",
+    "description": "카드결제",
+    "occurred_on": "2026-06-03",
+    "occurred_time": "11:05:44",
+    "source_hash": "8a7a646a0313526efabf8c14486cc58dfe1d1fb7fce688562b2a988241ae5245"
+  },
+  {
+    "amount_minor": "-17000",
+    "balance_minor": "198000",
+    "counterparty": "넷플릭스",
+    "currency": "KRW",
+    "description": "자동이체",
+    "occurred_on": "2026-06-10",
+    "occurred_time": "09:00:00",
+    "source_hash": "9b22b3d1178e279bdc359543e0a3a0149041bc8c32707c3fdd202ea37035498d"
+  },
+  {
+    "amount_minor": "-250000",
+    "balance_minor": "-52000",
+    "counterparty": "하나은행",
+    "currency": "KRW",
+    "description": "대출이자",
+    "occurred_on": "2026-06-20",
+    "occurred_time": "15:30:00",
+    "source_hash": "57470e2dfc75e1ba1426e88e06fd7c7ac62436e592ca9ee08f8c571d7f0363a0"
+  },
+  {
+    "amount_minor": "300000",
+    "balance_minor": "248000",
+    "counterparty": "월급",
+    "currency": "KRW",
+    "description": "입금",
+    "occurred_on": "2026-06-25",
+    "occurred_time": "10:00:00",
+    "source_hash": "eada181930a38c02608d52fb107627bce396b220c75996183d29865ff07066ed"
+  }
+]

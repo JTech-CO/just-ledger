@@ -1,0 +1,33 @@
+[package]
+name = "statement-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "명세서 파싱·정규화·BLAKE3 지문·Argon2id 암호화 (브라우저 WASM)"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# 인코딩: CP949(WHATWG EUC-KR) 판별·디코드
+encoding_rs = "0.8"
+# 유니코드 NFKC 정규화 (지문 정규화 규칙, 백서 §4.3)
+unicode-normalization = "0.1"
+# 중복 제거 지문
+blake3 = { version = "1", default-features = false }
+# 패스프레이즈 키 파생 + AEAD (백서 §7 — 서버는 복호화 불가)
+argon2 = { version = "0.5", default-features = false, features = ["alloc"] }
+chacha20poly1305 = "0.10"
+base64 = "0.22"
+# 브라우저 CSPRNG (salt/nonce)
+getrandom = { version = "0.2", features = ["js"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+
+[dev-dependencies]
+
+[profile.release]
+opt-level = 3
+lto = true

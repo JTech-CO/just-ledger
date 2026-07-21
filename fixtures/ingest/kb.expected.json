@@ -1,0 +1,52 @@
+[
+  {
+    "amount_minor": "-4500",
+    "balance_minor": "1234500",
+    "counterparty": "스타벅스 강남점",
+    "currency": "KRW",
+    "description": "체크카드",
+    "occurred_on": "2026-06-02",
+    "occurred_time": "09:14:33",
+    "source_hash": "e0fc0329fb7469d3c4dd8859dc99513a5d4625ca5be6c1b3d73fb8f1c50337cd"
+  },
+  {
+    "amount_minor": "-4500",
+    "balance_minor": "1230000",
+    "counterparty": "스타벅스 강남점",
+    "currency": "KRW",
+    "description": "체크카드",
+    "occurred_on": "2026-06-02",
+    "occurred_time": "09:14:33",
+    "source_hash": "68ddd51d5fb8885724aed2185576744f16de86dab57bc9ac54e8adad8dbaf891"
+  },
+  {
+    "amount_minor": "3500000",
+    "balance_minor": "4730000",
+    "counterparty": "(주)테크컴퍼니",
+    "currency": "KRW",
+    "description": "급여",
+    "occurred_on": "2026-06-05",
+    "occurred_time": "18:22:10",
+    "source_hash": "0e16b294e61de7aa33e2c22f6e0f304a9977510e4270d5f00102c97d453827da"
+  },
+  {
+    "amount_minor": "-200000",
+    "balance_minor": "4530000",
+    "counterparty": "김철수",
+    "currency": "KRW",
+    "description": "이체",
+    "occurred_on": "2026-06-15",
+    "occurred_time": "00:00:00",
+    "source_hash": "7e59e2b825acddfa93dcd8b28d3d1b6a74b4c92d4c2346a3667b5660c015bc1b"
+  },
+  {
+    "amount_minor": "-12000",
+    "balance_minor": "4518000",
+    "counterparty": "CU 서울역점",
+    "currency": "KRW",
+    "description": "편의점",
+    "occurred_on": "2026-06-28",
+    "occurred_time": "23:59:59",
+    "source_hash": "f13c5bfe32e337ca050b60b685ab5f8ce9fee95e202db85bb7215ad59004e1e7"
+  }
+]

@@ -1,0 +1,39 @@
+[
+  {
+    "amount_minor": "-3200",
+    "balance_minor": "150800",
+    "currency": "KRW",
+    "description": "GS25 서울역점",
+    "occurred_on": "2026-06-01",
+    "occurred_time": "08:12:45",
+    "source_hash": "d4afe64dca2a539178c2c9c2cf35a622b31804f8ecda9d0bdbaf2ed0cd5a91bb"
+  },
+  {
+    "amount_minor": "-3200",
+    "balance_minor": "147600",
+    "currency": "KRW",
+    "description": "GS25 서울역점",
+    "occurred_on": "2026-06-01",
+    "occurred_time": "08:12:45",
+    "source_hash": "e45c4c6a3ed2dc7ee7a3bb0223ebddadaa6b659fb42c22ba65f896f8abe9e0d9"
+  },
+  {
+    "amount_minor": "-45000",
+    "balance_minor": "102600",
+    "counterparty": "모임회비",
+    "currency": "KRW",
+    "description": "친구에게 보냄",
+    "occurred_on": "2026-06-10",
+    "occurred_time": "21:15:03",
+    "source_hash": "0ab44ba2417bf71b5b295cc359156337047980ad4cc480e385fc0daf78160c09"
+  },
+  {
+    "amount_minor": "1250",
+    "balance_minor": "103850",
+    "currency": "KRW",
+    "description": "이자",
+    "occurred_on": "2026-06-25",
+    "occurred_time": "14:00:00",
+    "source_hash": "7cb655b34b437315fd10c285688ea7e24d1e72b1c7bd4c5773e520f48ce4b654"
+  }
+]
