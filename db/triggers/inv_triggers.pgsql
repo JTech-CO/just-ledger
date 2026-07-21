@@ -141,6 +141,42 @@ CREATE TRIGGER trg_10_inv3_entry
   BEFORE INSERT OR UPDATE OR DELETE ON entry
   FOR EACH ROW EXECUTE FUNCTION fn_inv3_entry();
 
+-- ── 계정 계층 순환 방지 (JL006) ──────────────────────────────────────────
+-- parent_id 로 자기 자신에 도달하는 순환이 생기면 재귀 CTE(fn_subtree_balance 등)가
+-- 무한 순회한다. 부모 체인을 거슬러 올라가며 순환·과도한 깊이를 커밋 전에 거절한다.
+CREATE OR REPLACE FUNCTION fn_account_no_cycle() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_cur   uuid;
+  v_depth int := 0;
+BEGIN
+  IF NEW.parent_id IS NULL THEN RETURN NEW; END IF;
+  IF NEW.parent_id = NEW.id THEN
+    RAISE EXCEPTION USING ERRCODE = 'JL006',
+      MESSAGE = format('계정 %s 은 자기 자신을 상위로 둘 수 없습니다', NEW.id);
+  END IF;
+  v_cur := NEW.parent_id;
+  WHILE v_cur IS NOT NULL LOOP
+    v_depth := v_depth + 1;
+    IF v_cur = NEW.id THEN
+      RAISE EXCEPTION USING ERRCODE = 'JL006',
+        MESSAGE = format('계정 계층 순환 감지: %s', NEW.id);
+    END IF;
+    IF v_depth > 64 THEN
+      RAISE EXCEPTION USING ERRCODE = 'JL006',
+        MESSAGE = '계정 계층 깊이 제한(64) 초과';
+    END IF;
+    SELECT parent_id INTO v_cur FROM account WHERE id = v_cur;
+  END LOOP;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_10_account_no_cycle ON account;
+CREATE TRIGGER trg_10_account_no_cycle
+  BEFORE INSERT OR UPDATE OF parent_id ON account
+  FOR EACH ROW EXECUTE FUNCTION fn_account_no_cycle();
+
 -- ── INV-5: 멤버십 행 자동 유지 ───────────────────────────────────────────
 -- transfer_link_member.txn_id PK 가 "한 txn 최대 1개 링크"를 유니크 인덱스로 강제.
 -- 이미 링크된 txn 을 다시 링크하면 23505(unique_violation)로 실패한다.

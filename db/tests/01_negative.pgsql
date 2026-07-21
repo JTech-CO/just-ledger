@@ -206,6 +206,28 @@ BEGIN
     RAISE NOTICE 'PASS T8: rate_den=0 거절 (23514)';
   END;
 
+  -- ── T9. 계정 계층 순환 방지 (JL006) ────────────────────────────────────
+  DECLARE
+    v_p uuid; v_c uuid;
+  BEGIN
+    INSERT INTO account (owner_id, code, name, type, currency)
+      VALUES (v_owner, 'CYC.P', '부모', 'asset', 'KRW') RETURNING id INTO v_p;
+    INSERT INTO account (owner_id, code, name, type, currency, parent_id)
+      VALUES (v_owner, 'CYC.C', '자식', 'asset', 'KRW', v_p) RETURNING id INTO v_c;
+    BEGIN
+      UPDATE account SET parent_id = v_c WHERE id = v_p;   -- p → c → p 순환
+      RAISE EXCEPTION 'TEST_FAIL: 계정 순환이 통과됨';
+    EXCEPTION WHEN sqlstate 'JL006' THEN
+      RAISE NOTICE 'PASS T9a: 계정 계층 순환 거절 (JL006)';
+    END;
+    BEGIN
+      UPDATE account SET parent_id = v_p WHERE id = v_p;   -- 자기 참조
+      RAISE EXCEPTION 'TEST_FAIL: 자기 참조가 통과됨';
+    EXCEPTION WHEN sqlstate 'JL006' THEN
+      RAISE NOTICE 'PASS T9b: 자기 참조 거절 (JL006)';
+    END;
+  END;
+
   RAISE NOTICE 'OK: 01_negative 전체 통과';
 END $$;
 

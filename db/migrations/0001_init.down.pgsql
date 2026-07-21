@@ -33,6 +33,7 @@ DROP FUNCTION IF EXISTS
   fn_inv1_trg_entry(),
   fn_inv3_txn(),
   fn_inv3_entry(),
+  fn_account_no_cycle(),
   fn_tlink_member(),
   fn_tlink_immutable(),
   fn_bal_apply(uuid, char, bigint),

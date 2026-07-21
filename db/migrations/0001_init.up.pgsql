@@ -195,10 +195,13 @@ CREATE INDEX idx_artifact_owner ON report_artifact (owner_id, kind);
 -- ── 잔액 유지 테이블 (내부) ───────────────────────────────────────────────
 -- balance_minor = sum(debit) - sum(credit), posted 이상 상태의 entry 만 반영.
 -- 표시 부호(자산/부채 관점)는 상위 계층이 account.type 으로 결정한다.
+-- CHECK: 잔액도 계약 moneyMinor(18자리) 표현 범위를 벗어나지 않게 강제한다 —
+-- 넘치면 해당 txn 커밋이 거절(fail-closed)되며, NOTIFY/API 직렬화가 계약을 위반하지 않는다.
 CREATE TABLE account_balance (
   account_id    uuid NOT NULL,
   currency      char(3) NOT NULL,
-  balance_minor bigint NOT NULL DEFAULT 0,
+  balance_minor bigint NOT NULL DEFAULT 0
+    CHECK (balance_minor BETWEEN -999999999999999999 AND 999999999999999999),
   PRIMARY KEY (account_id, currency),
   FOREIGN KEY (account_id, currency) REFERENCES account (id, currency) ON DELETE CASCADE
 );
@@ -240,6 +243,16 @@ BEGIN
 END $$;
 
 GRANT USAGE ON SCHEMA public TO ledger_app, ledger_worker, ledger_realtime;
+
+-- 마이그레이션을 적용한 로그인 롤(= 서비스가 접속하는 롤)이 SET ROLE 로 강등할 수
+-- 있도록 멤버십을 부여한다. 수퍼유저 배포에선 무해(이미 가능), 비수퍼유저 배포에서
+-- 이것이 없으면 앱 풀의 SET ROLE ledger_app 이 실패해 서비스가 기동하지 못한다.
+DO $$
+BEGIN
+  IF NOT pg_has_role(current_user, 'ledger_app', 'MEMBER') THEN
+    EXECUTE format('GRANT ledger_app TO %I', current_user);
+  END IF;
+END $$;
 
 -- web(app): 도메인 전반 CRUD (RLS 로 소유자 격리)
 GRANT SELECT, INSERT, UPDATE, DELETE ON
