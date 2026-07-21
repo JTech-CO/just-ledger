@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/inference.schema.json",
+  "title": "inference",
+  "description": "Prolog 추론 서비스(무상태)의 요청/응답 계약. 서비스는 DB 를 보지 않는다 — 호출자가 사실을 실어 보내고 결과만 받는다. 분류의 merchant 는 클라이언트가 복호화해 일시 전달하며 서버·서비스 어디에도 영속되지 않는다 (INV-6). 이체 매칭은 금액 '정확 일치'만 쓴다 (INV-8 — 근사 매칭 금지).",
+  "type": "object",
+  "$defs": {
+    "classifyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 5000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["txn_id", "merchant", "amount_minor"],
+            "properties": {
+              "txn_id": { "$ref": "common.schema.json#/$defs/uuid" },
+              "merchant": {
+                "description": "정규화된 상점명 (NFKC·공백축약·접두어 제거·소문자 — statement-wasm normalize_merchant 와 동일 규칙). 영속 금지.",
+                "type": "string",
+                "maxLength": 256
+              },
+              "amount_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" }
+            }
+          }
+        }
+      }
+    },
+    "classifyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["results"],
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["txn_id", "category", "rule_name", "confidence"],
+            "properties": {
+              "txn_id": { "$ref": "common.schema.json#/$defs/uuid" },
+              "category": {
+                "description": "분류 카테고리 슬러그 (분류 불가면 'unknown')",
+                "type": "string",
+                "pattern": "^[a-z0-9_]{1,32}$"
+              },
+              "rule_name": {
+                "description": "근거 규칙명 — Inspector 표시용, 필수 (M4 DoD 6)",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "confidence": { "type": "integer", "minimum": 0, "maximum": 100 }
+            }
+          }
+        }
+      }
+    },
+    "transferRequest": {
+      "description": "이체 페어 매칭 입력 — 전부 서버 가시 필드 (평문 불필요).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["txn_id", "account_id", "amount_minor", "occurred_on", "linked"],
+            "properties": {
+              "txn_id": { "$ref": "common.schema.json#/$defs/uuid" },
+              "account_id": { "$ref": "common.schema.json#/$defs/uuid" },
+              "amount_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" },
+              "occurred_on": { "$ref": "common.schema.json#/$defs/date" },
+              "linked": {
+                "description": "이미 transfer_link 에 속해 있는가 (INV-5 — 매칭 후보에서 제외)",
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "transferResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pairs"],
+      "properties": {
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["txn_a", "txn_b", "confidence", "matched_by"],
+            "properties": {
+              "txn_a": {
+                "description": "txn_a < txn_b 정규화 (transfer_link 계약과 동일)",
+                "$ref": "common.schema.json#/$defs/uuid"
+              },
+              "txn_b": { "$ref": "common.schema.json#/$defs/uuid" },
+              "confidence": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "matched_by": { "type": "string", "minLength": 1, "maxLength": 64 }
+            }
+          }
+        }
+      }
+    },
+    "recurringRequest": {
+      "description": "정기결제 탐지 입력 — merchant 는 일시 전달 (영속 금지).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["txn_id", "merchant", "amount_minor", "occurred_on"],
+            "properties": {
+              "txn_id": { "$ref": "common.schema.json#/$defs/uuid" },
+              "merchant": { "type": "string", "maxLength": 256 },
+              "amount_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" },
+              "occurred_on": { "$ref": "common.schema.json#/$defs/date" }
+            }
+          }
+        }
+      }
+    },
+    "recurringResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["series"],
+      "properties": {
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["merchant", "txn_ids", "period_days", "rule_name"],
+            "properties": {
+              "merchant": { "type": "string" },
+              "txn_ids": {
+                "type": "array",
+                "minItems": 6,
+                "items": { "$ref": "common.schema.json#/$defs/uuid" }
+              },
+              "period_days": {
+                "description": "추정 주기 (일 단위 정수 — 예: 30=월간, 7=주간)",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 366
+              },
+              "rule_name": { "type": "string", "minLength": 1, "maxLength": 64 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
