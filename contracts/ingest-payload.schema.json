@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/ingest-payload.schema.json",
+  "title": "ingest_payload",
+  "description": "클라이언트 → 서버 인제스트 업로드 봉투. 서버가 볼 수 있는 것은 원장 구성에 필요한 최소 필드(지문·일자·금액·통화)뿐이며, 적요·상대처가 담긴 전체 레코드는 cipher.blob 안에만 존재한다 — 키는 사용자 패스프레이즈 Argon2id 파생으로 서버는 복호화할 수 없다 (INV-6, M3 DoD 4 바이트 검사 대상).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["account_id", "filename", "file_hash", "record_count", "records", "cipher"],
+  "properties": {
+    "account_id": {
+      "description": "이 명세서가 속한 은행 계정 (draft txn 의 한쪽 다리).",
+      "$ref": "common.schema.json#/$defs/uuid"
+    },
+    "filename": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "file_hash": {
+      "description": "원문 파일 전체의 BLAKE3 — 파일 단위 재업로드 탐지.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "record_count": { "type": "integer", "minimum": 0 },
+    "records": {
+      "description": "레코드별 서버 가시 최소 필드. description/counterparty/balance 는 여기 없다.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_hash", "occurred_on", "amount_minor", "currency"],
+        "properties": {
+          "source_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "occurred_on": { "$ref": "common.schema.json#/$defs/date" },
+          "amount_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" },
+          "currency": { "$ref": "common.schema.json#/$defs/currency" }
+        }
+      }
+    },
+    "cipher": {
+      "description": "statement_record[] 전체(JSON)의 암호문. Argon2id(passphrase, salt) → 32B 키 → ChaCha20-Poly1305.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alg", "salt", "nonce", "m_kib", "t", "p", "blob"],
+      "properties": {
+        "alg": { "const": "argon2id-chacha20poly1305" },
+        "salt": { "type": "string", "contentEncoding": "base64", "minLength": 22 },
+        "nonce": { "type": "string", "contentEncoding": "base64", "minLength": 16 },
+        "m_kib": { "type": "integer", "minimum": 8192, "maximum": 1048576 },
+        "t": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "p": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "blob": { "type": "string", "contentEncoding": "base64" }
+      }
+    }
+  }
+}
