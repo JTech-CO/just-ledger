@@ -69,8 +69,8 @@ build-wasm: ## Rust — 명세서 파싱 WASM
 build-dsl: ## Haskell — 예산 규칙 DSL
 	cd modules/rules-dsl && cabal build
 
-build-settlement: ## COBOL — 마감 정산 배치
-	cd modules/settlement && cobc -x -std=cobol2014 -O2 -o bin/settle settle.cbl
+build-settlement: ## COBOL — 마감 정산 배치 (settle + amort)
+	bash modules/settlement/build.sh
 
 build-realtime: ## Elixir — Phoenix 실시간
 	cd services/realtime && mix deps.get && MIX_ENV=prod mix compile
