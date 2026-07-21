@@ -243,17 +243,22 @@ GROUP BY e.account_id, e.currency, date_trunc('month', t.occurred_on);
 
 -- ── 서비스 역할 및 권한 ──────────────────────────────────────────────────
 -- 역할은 클러스터 전역이므로 존재 검사 후 생성한다. BYPASSRLS 를 부여하지 않는다(§7).
+-- 역할은 클러스터 전역 — 여러 DB 에 동시 적용(병렬 테스트·동시 배포)될 수 있어
+-- 존재검사→생성 사이 경합이 난다. 중복 생성 에러를 그 자리에서 삼켜 멱등으로 만든다.
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ledger_app') THEN
+  BEGIN
     CREATE ROLE ledger_app NOLOGIN;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ledger_worker') THEN
+  EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL;
+  END;
+  BEGIN
     CREATE ROLE ledger_worker NOLOGIN;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ledger_realtime') THEN
+  EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL;
+  END;
+  BEGIN
     CREATE ROLE ledger_realtime NOLOGIN;
-  END IF;
+  EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL;
+  END;
 END $$;
 
 GRANT USAGE ON SCHEMA public TO ledger_app, ledger_worker, ledger_realtime;
