@@ -1,0 +1,500 @@
+{"merchant":"스타벅스","amount_minor":"-1000","expected":"cafe"}
+{"merchant":"스타벅스 강남점","amount_minor":"-8919","expected":"cafe"}
+{"merchant":"스타벅스 서울역점","amount_minor":"-16838","expected":"cafe"}
+{"merchant":"스타벅스 홍대점","amount_minor":"-24757","expected":"cafe"}
+{"merchant":"스타벅스 역삼점","amount_minor":"-32676","expected":"cafe"}
+{"merchant":"스타벅스 판교점","amount_minor":"-40595","expected":"cafe"}
+{"merchant":"투썸플레이스","amount_minor":"-48514","expected":"cafe"}
+{"merchant":"투썸플레이스 강남점","amount_minor":"-56433","expected":"cafe"}
+{"merchant":"투썸플레이스 서울역점","amount_minor":"-64352","expected":"cafe"}
+{"merchant":"투썸플레이스 홍대점","amount_minor":"-72271","expected":"cafe"}
+{"merchant":"투썸플레이스 역삼점","amount_minor":"-80190","expected":"cafe"}
+{"merchant":"투썸플레이스 판교점","amount_minor":"-88109","expected":"cafe"}
+{"merchant":"이디야커피","amount_minor":"-7028","expected":"cafe"}
+{"merchant":"이디야커피 강남점","amount_minor":"-14947","expected":"cafe"}
+{"merchant":"이디야커피 서울역점","amount_minor":"-22866","expected":"cafe"}
+{"merchant":"이디야커피 홍대점","amount_minor":"-30785","expected":"cafe"}
+{"merchant":"이디야커피 역삼점","amount_minor":"-38704","expected":"cafe"}
+{"merchant":"이디야커피 판교점","amount_minor":"-46623","expected":"cafe"}
+{"merchant":"메가엠지씨커피","amount_minor":"-54542","expected":"cafe"}
+{"merchant":"메가엠지씨커피 강남점","amount_minor":"-62461","expected":"cafe"}
+{"merchant":"메가엠지씨커피 서울역점","amount_minor":"-70380","expected":"cafe"}
+{"merchant":"메가엠지씨커피 홍대점","amount_minor":"-78299","expected":"cafe"}
+{"merchant":"메가엠지씨커피 역삼점","amount_minor":"-86218","expected":"cafe"}
+{"merchant":"메가엠지씨커피 판교점","amount_minor":"-5137","expected":"cafe"}
+{"merchant":"컴포즈커피","amount_minor":"-13056","expected":"cafe"}
+{"merchant":"컴포즈커피 강남점","amount_minor":"-20975","expected":"cafe"}
+{"merchant":"컴포즈커피 서울역점","amount_minor":"-28894","expected":"cafe"}
+{"merchant":"컴포즈커피 홍대점","amount_minor":"-36813","expected":"cafe"}
+{"merchant":"컴포즈커피 역삼점","amount_minor":"-44732","expected":"cafe"}
+{"merchant":"컴포즈커피 판교점","amount_minor":"-52651","expected":"cafe"}
+{"merchant":"빽다방","amount_minor":"-60570","expected":"cafe"}
+{"merchant":"빽다방 강남점","amount_minor":"-68489","expected":"cafe"}
+{"merchant":"빽다방 서울역점","amount_minor":"-76408","expected":"cafe"}
+{"merchant":"빽다방 홍대점","amount_minor":"-84327","expected":"cafe"}
+{"merchant":"빽다방 역삼점","amount_minor":"-3246","expected":"cafe"}
+{"merchant":"빽다방 판교점","amount_minor":"-11165","expected":"cafe"}
+{"merchant":"할리스","amount_minor":"-19084","expected":"cafe"}
+{"merchant":"할리스 강남점","amount_minor":"-27003","expected":"cafe"}
+{"merchant":"할리스 서울역점","amount_minor":"-34922","expected":"cafe"}
+{"merchant":"할리스 홍대점","amount_minor":"-42841","expected":"cafe"}
+{"merchant":"할리스 역삼점","amount_minor":"-50760","expected":"cafe"}
+{"merchant":"할리스 판교점","amount_minor":"-58679","expected":"cafe"}
+{"merchant":"배스킨라빈스","amount_minor":"-66598","expected":"cafe"}
+{"merchant":"배스킨라빈스 강남점","amount_minor":"-74517","expected":"cafe"}
+{"merchant":"배스킨라빈스 서울역점","amount_minor":"-82436","expected":"cafe"}
+{"merchant":"배스킨라빈스 홍대점","amount_minor":"-1355","expected":"cafe"}
+{"merchant":"배스킨라빈스 역삼점","amount_minor":"-9274","expected":"cafe"}
+{"merchant":"배스킨라빈스 판교점","amount_minor":"-17193","expected":"cafe"}
+{"merchant":"파리바게뜨","amount_minor":"-25112","expected":"cafe"}
+{"merchant":"파리바게뜨 강남점","amount_minor":"-33031","expected":"cafe"}
+{"merchant":"파리바게뜨 서울역점","amount_minor":"-40950","expected":"cafe"}
+{"merchant":"파리바게뜨 홍대점","amount_minor":"-48869","expected":"cafe"}
+{"merchant":"파리바게뜨 역삼점","amount_minor":"-56788","expected":"cafe"}
+{"merchant":"파리바게뜨 판교점","amount_minor":"-64707","expected":"cafe"}
+{"merchant":"뚜레쥬르","amount_minor":"-72626","expected":"cafe"}
+{"merchant":"뚜레쥬르 강남점","amount_minor":"-80545","expected":"cafe"}
+{"merchant":"뚜레쥬르 서울역점","amount_minor":"-88464","expected":"cafe"}
+{"merchant":"뚜레쥬르 홍대점","amount_minor":"-7383","expected":"cafe"}
+{"merchant":"뚜레쥬르 역삼점","amount_minor":"-15302","expected":"cafe"}
+{"merchant":"뚜레쥬르 판교점","amount_minor":"-23221","expected":"cafe"}
+{"merchant":"배달의민족","amount_minor":"-31140","expected":"delivery"}
+{"merchant":"배달의민족 강남점","amount_minor":"-39059","expected":"delivery"}
+{"merchant":"배달의민족 서울역점","amount_minor":"-46978","expected":"delivery"}
+{"merchant":"배달의민족 홍대점","amount_minor":"-54897","expected":"delivery"}
+{"merchant":"배달의민족 역삼점","amount_minor":"-62816","expected":"delivery"}
+{"merchant":"배달의민족 판교점","amount_minor":"-70735","expected":"delivery"}
+{"merchant":"요기요","amount_minor":"-78654","expected":"delivery"}
+{"merchant":"요기요 강남점","amount_minor":"-86573","expected":"delivery"}
+{"merchant":"요기요 서울역점","amount_minor":"-5492","expected":"delivery"}
+{"merchant":"요기요 홍대점","amount_minor":"-13411","expected":"delivery"}
+{"merchant":"요기요 역삼점","amount_minor":"-21330","expected":"delivery"}
+{"merchant":"요기요 판교점","amount_minor":"-29249","expected":"delivery"}
+{"merchant":"쿠팡이츠","amount_minor":"-37168","expected":"delivery"}
+{"merchant":"쿠팡이츠 강남점","amount_minor":"-45087","expected":"delivery"}
+{"merchant":"쿠팡이츠 서울역점","amount_minor":"-53006","expected":"delivery"}
+{"merchant":"쿠팡이츠 홍대점","amount_minor":"-60925","expected":"delivery"}
+{"merchant":"쿠팡이츠 역삼점","amount_minor":"-68844","expected":"delivery"}
+{"merchant":"쿠팡이츠 판교점","amount_minor":"-76763","expected":"delivery"}
+{"merchant":"맥도날드","amount_minor":"-84682","expected":"food"}
+{"merchant":"맥도날드 강남점","amount_minor":"-3601","expected":"food"}
+{"merchant":"맥도날드 서울역점","amount_minor":"-11520","expected":"food"}
+{"merchant":"맥도날드 홍대점","amount_minor":"-19439","expected":"food"}
+{"merchant":"맥도날드 역삼점","amount_minor":"-27358","expected":"food"}
+{"merchant":"맥도날드 판교점","amount_minor":"-35277","expected":"food"}
+{"merchant":"버거킹","amount_minor":"-43196","expected":"food"}
+{"merchant":"버거킹 강남점","amount_minor":"-51115","expected":"food"}
+{"merchant":"버거킹 서울역점","amount_minor":"-59034","expected":"food"}
+{"merchant":"버거킹 홍대점","amount_minor":"-66953","expected":"food"}
+{"merchant":"버거킹 역삼점","amount_minor":"-74872","expected":"food"}
+{"merchant":"버거킹 판교점","amount_minor":"-82791","expected":"food"}
+{"merchant":"롯데리아","amount_minor":"-1710","expected":"food"}
+{"merchant":"롯데리아 강남점","amount_minor":"-9629","expected":"food"}
+{"merchant":"롯데리아 서울역점","amount_minor":"-17548","expected":"food"}
+{"merchant":"롯데리아 홍대점","amount_minor":"-25467","expected":"food"}
+{"merchant":"롯데리아 역삼점","amount_minor":"-33386","expected":"food"}
+{"merchant":"롯데리아 판교점","amount_minor":"-41305","expected":"food"}
+{"merchant":"맘스터치","amount_minor":"-49224","expected":"food"}
+{"merchant":"맘스터치 강남점","amount_minor":"-57143","expected":"food"}
+{"merchant":"맘스터치 서울역점","amount_minor":"-65062","expected":"food"}
+{"merchant":"맘스터치 홍대점","amount_minor":"-72981","expected":"food"}
+{"merchant":"맘스터치 역삼점","amount_minor":"-80900","expected":"food"}
+{"merchant":"맘스터치 판교점","amount_minor":"-88819","expected":"food"}
+{"merchant":"김밥천국","amount_minor":"-7738","expected":"food"}
+{"merchant":"김밥천국 강남점","amount_minor":"-15657","expected":"food"}
+{"merchant":"김밥천국 서울역점","amount_minor":"-23576","expected":"food"}
+{"merchant":"김밥천국 홍대점","amount_minor":"-31495","expected":"food"}
+{"merchant":"김밥천국 역삼점","amount_minor":"-39414","expected":"food"}
+{"merchant":"김밥천국 판교점","amount_minor":"-47333","expected":"food"}
+{"merchant":"교촌치킨","amount_minor":"-55252","expected":"food"}
+{"merchant":"교촌치킨 강남점","amount_minor":"-63171","expected":"food"}
+{"merchant":"교촌치킨 서울역점","amount_minor":"-71090","expected":"food"}
+{"merchant":"교촌치킨 홍대점","amount_minor":"-79009","expected":"food"}
+{"merchant":"교촌치킨 역삼점","amount_minor":"-86928","expected":"food"}
+{"merchant":"교촌치킨 판교점","amount_minor":"-5847","expected":"food"}
+{"merchant":"비비큐치킨","amount_minor":"-13766","expected":"food"}
+{"merchant":"비비큐치킨 강남점","amount_minor":"-21685","expected":"food"}
+{"merchant":"비비큐치킨 서울역점","amount_minor":"-29604","expected":"food"}
+{"merchant":"비비큐치킨 홍대점","amount_minor":"-37523","expected":"food"}
+{"merchant":"비비큐치킨 역삼점","amount_minor":"-45442","expected":"food"}
+{"merchant":"비비큐치킨 판교점","amount_minor":"-53361","expected":"food"}
+{"merchant":"명동초밥","amount_minor":"-61280","expected":"food"}
+{"merchant":"명동초밥 강남점","amount_minor":"-69199","expected":"food"}
+{"merchant":"명동초밥 서울역점","amount_minor":"-77118","expected":"food"}
+{"merchant":"명동초밥 홍대점","amount_minor":"-85037","expected":"food"}
+{"merchant":"명동초밥 역삼점","amount_minor":"-3956","expected":"food"}
+{"merchant":"명동초밥 판교점","amount_minor":"-11875","expected":"food"}
+{"merchant":"전주국밥","amount_minor":"-19794","expected":"food"}
+{"merchant":"전주국밥 강남점","amount_minor":"-27713","expected":"food"}
+{"merchant":"전주국밥 서울역점","amount_minor":"-35632","expected":"food"}
+{"merchant":"전주국밥 홍대점","amount_minor":"-43551","expected":"food"}
+{"merchant":"전주국밥 역삼점","amount_minor":"-51470","expected":"food"}
+{"merchant":"전주국밥 판교점","amount_minor":"-59389","expected":"food"}
+{"merchant":"시골분식","amount_minor":"-67308","expected":"food"}
+{"merchant":"시골분식 강남점","amount_minor":"-75227","expected":"food"}
+{"merchant":"시골분식 서울역점","amount_minor":"-83146","expected":"food"}
+{"merchant":"시골분식 홍대점","amount_minor":"-2065","expected":"food"}
+{"merchant":"시골분식 역삼점","amount_minor":"-9984","expected":"food"}
+{"merchant":"시골분식 판교점","amount_minor":"-17903","expected":"food"}
+{"merchant":"왕가네식당","amount_minor":"-25822","expected":"food"}
+{"merchant":"왕가네식당 강남점","amount_minor":"-33741","expected":"food"}
+{"merchant":"왕가네식당 서울역점","amount_minor":"-41660","expected":"food"}
+{"merchant":"왕가네식당 홍대점","amount_minor":"-49579","expected":"food"}
+{"merchant":"왕가네식당 역삼점","amount_minor":"-57498","expected":"food"}
+{"merchant":"왕가네식당 판교점","amount_minor":"-65417","expected":"food"}
+{"merchant":"gs25","amount_minor":"-73336","expected":"convenience"}
+{"merchant":"gs25 강남점","amount_minor":"-81255","expected":"convenience"}
+{"merchant":"gs25 서울역점","amount_minor":"-89174","expected":"convenience"}
+{"merchant":"gs25 홍대점","amount_minor":"-8093","expected":"convenience"}
+{"merchant":"gs25 역삼점","amount_minor":"-16012","expected":"convenience"}
+{"merchant":"gs25 판교점","amount_minor":"-23931","expected":"convenience"}
+{"merchant":"cu","amount_minor":"-31850","expected":"convenience"}
+{"merchant":"cu  강남점","amount_minor":"-39769","expected":"convenience"}
+{"merchant":"cu  서울역점","amount_minor":"-47688","expected":"convenience"}
+{"merchant":"cu  홍대점","amount_minor":"-55607","expected":"convenience"}
+{"merchant":"cu  역삼점","amount_minor":"-63526","expected":"convenience"}
+{"merchant":"cu  판교점","amount_minor":"-71445","expected":"convenience"}
+{"merchant":"세븐일레븐","amount_minor":"-79364","expected":"convenience"}
+{"merchant":"세븐일레븐 강남점","amount_minor":"-87283","expected":"convenience"}
+{"merchant":"세븐일레븐 서울역점","amount_minor":"-6202","expected":"convenience"}
+{"merchant":"세븐일레븐 홍대점","amount_minor":"-14121","expected":"convenience"}
+{"merchant":"세븐일레븐 역삼점","amount_minor":"-22040","expected":"convenience"}
+{"merchant":"세븐일레븐 판교점","amount_minor":"-29959","expected":"convenience"}
+{"merchant":"이마트24","amount_minor":"-37878","expected":"convenience"}
+{"merchant":"이마트24 강남점","amount_minor":"-45797","expected":"convenience"}
+{"merchant":"이마트24 서울역점","amount_minor":"-53716","expected":"convenience"}
+{"merchant":"이마트24 홍대점","amount_minor":"-61635","expected":"convenience"}
+{"merchant":"이마트24 역삼점","amount_minor":"-69554","expected":"convenience"}
+{"merchant":"이마트24 판교점","amount_minor":"-77473","expected":"convenience"}
+{"merchant":"미니스톱","amount_minor":"-85392","expected":"convenience"}
+{"merchant":"미니스톱 강남점","amount_minor":"-4311","expected":"convenience"}
+{"merchant":"미니스톱 서울역점","amount_minor":"-12230","expected":"convenience"}
+{"merchant":"미니스톱 홍대점","amount_minor":"-20149","expected":"convenience"}
+{"merchant":"미니스톱 역삼점","amount_minor":"-28068","expected":"convenience"}
+{"merchant":"미니스톱 판교점","amount_minor":"-35987","expected":"convenience"}
+{"merchant":"이마트","amount_minor":"-43906","expected":"groceries"}
+{"merchant":"이마트 강남점","amount_minor":"-51825","expected":"groceries"}
+{"merchant":"이마트 서울역점","amount_minor":"-59744","expected":"groceries"}
+{"merchant":"이마트 홍대점","amount_minor":"-67663","expected":"groceries"}
+{"merchant":"이마트 역삼점","amount_minor":"-75582","expected":"groceries"}
+{"merchant":"이마트 판교점","amount_minor":"-83501","expected":"groceries"}
+{"merchant":"홈플러스","amount_minor":"-2420","expected":"groceries"}
+{"merchant":"홈플러스 강남점","amount_minor":"-10339","expected":"groceries"}
+{"merchant":"홈플러스 서울역점","amount_minor":"-18258","expected":"groceries"}
+{"merchant":"홈플러스 홍대점","amount_minor":"-26177","expected":"groceries"}
+{"merchant":"홈플러스 역삼점","amount_minor":"-34096","expected":"groceries"}
+{"merchant":"홈플러스 판교점","amount_minor":"-42015","expected":"groceries"}
+{"merchant":"롯데마트","amount_minor":"-49934","expected":"groceries"}
+{"merchant":"롯데마트 강남점","amount_minor":"-57853","expected":"groceries"}
+{"merchant":"롯데마트 서울역점","amount_minor":"-65772","expected":"groceries"}
+{"merchant":"롯데마트 홍대점","amount_minor":"-73691","expected":"groceries"}
+{"merchant":"롯데마트 역삼점","amount_minor":"-81610","expected":"groceries"}
+{"merchant":"롯데마트 판교점","amount_minor":"-89529","expected":"groceries"}
+{"merchant":"코스트코","amount_minor":"-8448","expected":"groceries"}
+{"merchant":"코스트코 강남점","amount_minor":"-16367","expected":"groceries"}
+{"merchant":"코스트코 서울역점","amount_minor":"-24286","expected":"groceries"}
+{"merchant":"코스트코 홍대점","amount_minor":"-32205","expected":"groceries"}
+{"merchant":"코스트코 역삼점","amount_minor":"-40124","expected":"groceries"}
+{"merchant":"코스트코 판교점","amount_minor":"-48043","expected":"groceries"}
+{"merchant":"마켓컬리","amount_minor":"-55962","expected":"groceries"}
+{"merchant":"마켓컬리 강남점","amount_minor":"-63881","expected":"groceries"}
+{"merchant":"마켓컬리 서울역점","amount_minor":"-71800","expected":"groceries"}
+{"merchant":"마켓컬리 홍대점","amount_minor":"-79719","expected":"groceries"}
+{"merchant":"마켓컬리 역삼점","amount_minor":"-87638","expected":"groceries"}
+{"merchant":"마켓컬리 판교점","amount_minor":"-6557","expected":"groceries"}
+{"merchant":"쿠팡","amount_minor":"-14476","expected":"groceries"}
+{"merchant":"쿠팡 강남점","amount_minor":"-22395","expected":"groceries"}
+{"merchant":"쿠팡 서울역점","amount_minor":"-30314","expected":"groceries"}
+{"merchant":"쿠팡 홍대점","amount_minor":"-38233","expected":"groceries"}
+{"merchant":"쿠팡 역삼점","amount_minor":"-46152","expected":"groceries"}
+{"merchant":"쿠팡 판교점","amount_minor":"-54071","expected":"groceries"}
+{"merchant":"카카오티택시","amount_minor":"-61990","expected":"taxi"}
+{"merchant":"카카오티택시 강남점","amount_minor":"-69909","expected":"taxi"}
+{"merchant":"카카오티택시 서울역점","amount_minor":"-77828","expected":"taxi"}
+{"merchant":"카카오티택시 홍대점","amount_minor":"-85747","expected":"taxi"}
+{"merchant":"카카오티택시 역삼점","amount_minor":"-4666","expected":"taxi"}
+{"merchant":"카카오티택시 판교점","amount_minor":"-12585","expected":"taxi"}
+{"merchant":"서울택시","amount_minor":"-20504","expected":"taxi"}
+{"merchant":"서울택시 강남점","amount_minor":"-28423","expected":"taxi"}
+{"merchant":"서울택시 서울역점","amount_minor":"-36342","expected":"taxi"}
+{"merchant":"서울택시 홍대점","amount_minor":"-44261","expected":"taxi"}
+{"merchant":"서울택시 역삼점","amount_minor":"-52180","expected":"taxi"}
+{"merchant":"서울택시 판교점","amount_minor":"-60099","expected":"taxi"}
+{"merchant":"서울지하철","amount_minor":"-68018","expected":"transport"}
+{"merchant":"서울지하철 강남점","amount_minor":"-75937","expected":"transport"}
+{"merchant":"서울지하철 서울역점","amount_minor":"-83856","expected":"transport"}
+{"merchant":"서울지하철 홍대점","amount_minor":"-2775","expected":"transport"}
+{"merchant":"서울지하철 역삼점","amount_minor":"-10694","expected":"transport"}
+{"merchant":"서울지하철 판교점","amount_minor":"-18613","expected":"transport"}
+{"merchant":"코레일","amount_minor":"-26532","expected":"transport"}
+{"merchant":"코레일 강남점","amount_minor":"-34451","expected":"transport"}
+{"merchant":"코레일 서울역점","amount_minor":"-42370","expected":"transport"}
+{"merchant":"코레일 홍대점","amount_minor":"-50289","expected":"transport"}
+{"merchant":"코레일 역삼점","amount_minor":"-58208","expected":"transport"}
+{"merchant":"코레일 판교점","amount_minor":"-66127","expected":"transport"}
+{"merchant":"티머니충전","amount_minor":"-74046","expected":"transport"}
+{"merchant":"티머니충전 강남점","amount_minor":"-81965","expected":"transport"}
+{"merchant":"티머니충전 서울역점","amount_minor":"-89884","expected":"transport"}
+{"merchant":"티머니충전 홍대점","amount_minor":"-8803","expected":"transport"}
+{"merchant":"티머니충전 역삼점","amount_minor":"-16722","expected":"transport"}
+{"merchant":"티머니충전 판교점","amount_minor":"-24641","expected":"transport"}
+{"merchant":"경기버스","amount_minor":"-32560","expected":"transport"}
+{"merchant":"경기버스 강남점","amount_minor":"-40479","expected":"transport"}
+{"merchant":"경기버스 서울역점","amount_minor":"-48398","expected":"transport"}
+{"merchant":"경기버스 홍대점","amount_minor":"-56317","expected":"transport"}
+{"merchant":"경기버스 역삼점","amount_minor":"-64236","expected":"transport"}
+{"merchant":"경기버스 판교점","amount_minor":"-72155","expected":"transport"}
+{"merchant":"하이패스충전","amount_minor":"-80074","expected":"transport"}
+{"merchant":"하이패스충전 강남점","amount_minor":"-87993","expected":"transport"}
+{"merchant":"하이패스충전 서울역점","amount_minor":"-6912","expected":"transport"}
+{"merchant":"하이패스충전 홍대점","amount_minor":"-14831","expected":"transport"}
+{"merchant":"하이패스충전 역삼점","amount_minor":"-22750","expected":"transport"}
+{"merchant":"하이패스충전 판교점","amount_minor":"-30669","expected":"transport"}
+{"merchant":"sk에너지 강남주유소","amount_minor":"-38588","expected":"fuel"}
+{"merchant":"sk에너지 강남주유소 강남점","amount_minor":"-46507","expected":"fuel"}
+{"merchant":"sk에너지 강남주유소 서울역점","amount_minor":"-54426","expected":"fuel"}
+{"merchant":"sk에너지 강남주유소 홍대점","amount_minor":"-62345","expected":"fuel"}
+{"merchant":"sk에너지 강남주유소 역삼점","amount_minor":"-70264","expected":"fuel"}
+{"merchant":"sk에너지 강남주유소 판교점","amount_minor":"-78183","expected":"fuel"}
+{"merchant":"gs칼텍스","amount_minor":"-86102","expected":"fuel"}
+{"merchant":"gs칼텍스 강남점","amount_minor":"-5021","expected":"fuel"}
+{"merchant":"gs칼텍스 서울역점","amount_minor":"-12940","expected":"fuel"}
+{"merchant":"gs칼텍스 홍대점","amount_minor":"-20859","expected":"fuel"}
+{"merchant":"gs칼텍스 역삼점","amount_minor":"-28778","expected":"fuel"}
+{"merchant":"gs칼텍스 판교점","amount_minor":"-36697","expected":"fuel"}
+{"merchant":"에쓰오일","amount_minor":"-44616","expected":"fuel"}
+{"merchant":"에쓰오일 강남점","amount_minor":"-52535","expected":"fuel"}
+{"merchant":"에쓰오일 서울역점","amount_minor":"-60454","expected":"fuel"}
+{"merchant":"에쓰오일 홍대점","amount_minor":"-68373","expected":"fuel"}
+{"merchant":"에쓰오일 역삼점","amount_minor":"-76292","expected":"fuel"}
+{"merchant":"에쓰오일 판교점","amount_minor":"-84211","expected":"fuel"}
+{"merchant":"에스케이텔레콤","amount_minor":"-3130","expected":"telecom"}
+{"merchant":"에스케이텔레콤 강남점","amount_minor":"-11049","expected":"telecom"}
+{"merchant":"에스케이텔레콤 서울역점","amount_minor":"-18968","expected":"telecom"}
+{"merchant":"에스케이텔레콤 홍대점","amount_minor":"-26887","expected":"telecom"}
+{"merchant":"에스케이텔레콤 역삼점","amount_minor":"-34806","expected":"telecom"}
+{"merchant":"에스케이텔레콤 판교점","amount_minor":"-42725","expected":"telecom"}
+{"merchant":"엘지유플러스","amount_minor":"-50644","expected":"telecom"}
+{"merchant":"엘지유플러스 강남점","amount_minor":"-58563","expected":"telecom"}
+{"merchant":"엘지유플러스 서울역점","amount_minor":"-66482","expected":"telecom"}
+{"merchant":"엘지유플러스 홍대점","amount_minor":"-74401","expected":"telecom"}
+{"merchant":"엘지유플러스 역삼점","amount_minor":"-82320","expected":"telecom"}
+{"merchant":"엘지유플러스 판교점","amount_minor":"-1239","expected":"telecom"}
+{"merchant":"통신요금납부","amount_minor":"-9158","expected":"telecom"}
+{"merchant":"통신요금납부 강남점","amount_minor":"-17077","expected":"telecom"}
+{"merchant":"통신요금납부 서울역점","amount_minor":"-24996","expected":"telecom"}
+{"merchant":"통신요금납부 홍대점","amount_minor":"-32915","expected":"telecom"}
+{"merchant":"통신요금납부 역삼점","amount_minor":"-40834","expected":"telecom"}
+{"merchant":"통신요금납부 판교점","amount_minor":"-48753","expected":"telecom"}
+{"merchant":"넷플릭스","amount_minor":"-56672","expected":"subscription"}
+{"merchant":"넷플릭스 강남점","amount_minor":"-64591","expected":"subscription"}
+{"merchant":"넷플릭스 서울역점","amount_minor":"-72510","expected":"subscription"}
+{"merchant":"넷플릭스 홍대점","amount_minor":"-80429","expected":"subscription"}
+{"merchant":"넷플릭스 역삼점","amount_minor":"-88348","expected":"subscription"}
+{"merchant":"넷플릭스 판교점","amount_minor":"-7267","expected":"subscription"}
+{"merchant":"netflix.com","amount_minor":"-15186","expected":"subscription"}
+{"merchant":"netflix.com 강남점","amount_minor":"-23105","expected":"subscription"}
+{"merchant":"netflix.com 서울역점","amount_minor":"-31024","expected":"subscription"}
+{"merchant":"netflix.com 홍대점","amount_minor":"-38943","expected":"subscription"}
+{"merchant":"netflix.com 역삼점","amount_minor":"-46862","expected":"subscription"}
+{"merchant":"netflix.com 판교점","amount_minor":"-54781","expected":"subscription"}
+{"merchant":"유튜브프리미엄","amount_minor":"-62700","expected":"subscription"}
+{"merchant":"유튜브프리미엄 강남점","amount_minor":"-70619","expected":"subscription"}
+{"merchant":"유튜브프리미엄 서울역점","amount_minor":"-78538","expected":"subscription"}
+{"merchant":"유튜브프리미엄 홍대점","amount_minor":"-86457","expected":"subscription"}
+{"merchant":"유튜브프리미엄 역삼점","amount_minor":"-5376","expected":"subscription"}
+{"merchant":"유튜브프리미엄 판교점","amount_minor":"-13295","expected":"subscription"}
+{"merchant":"스포티파이","amount_minor":"-21214","expected":"subscription"}
+{"merchant":"스포티파이 강남점","amount_minor":"-29133","expected":"subscription"}
+{"merchant":"스포티파이 서울역점","amount_minor":"-37052","expected":"subscription"}
+{"merchant":"스포티파이 홍대점","amount_minor":"-44971","expected":"subscription"}
+{"merchant":"스포티파이 역삼점","amount_minor":"-52890","expected":"subscription"}
+{"merchant":"스포티파이 판교점","amount_minor":"-60809","expected":"subscription"}
+{"merchant":"멜론정기결제","amount_minor":"-68728","expected":"subscription"}
+{"merchant":"멜론정기결제 강남점","amount_minor":"-76647","expected":"subscription"}
+{"merchant":"멜론정기결제 서울역점","amount_minor":"-84566","expected":"subscription"}
+{"merchant":"멜론정기결제 홍대점","amount_minor":"-3485","expected":"subscription"}
+{"merchant":"멜론정기결제 역삼점","amount_minor":"-11404","expected":"subscription"}
+{"merchant":"멜론정기결제 판교점","amount_minor":"-19323","expected":"subscription"}
+{"merchant":"쿠팡와우멤버십","amount_minor":"-27242","expected":"subscription"}
+{"merchant":"쿠팡와우멤버십 강남점","amount_minor":"-35161","expected":"subscription"}
+{"merchant":"쿠팡와우멤버십 서울역점","amount_minor":"-43080","expected":"subscription"}
+{"merchant":"쿠팡와우멤버십 홍대점","amount_minor":"-50999","expected":"subscription"}
+{"merchant":"쿠팡와우멤버십 역삼점","amount_minor":"-58918","expected":"subscription"}
+{"merchant":"쿠팡와우멤버십 판교점","amount_minor":"-66837","expected":"subscription"}
+{"merchant":"왓챠","amount_minor":"-74756","expected":"subscription"}
+{"merchant":"왓챠 강남점","amount_minor":"-82675","expected":"subscription"}
+{"merchant":"왓챠 서울역점","amount_minor":"-1594","expected":"subscription"}
+{"merchant":"왓챠 홍대점","amount_minor":"-9513","expected":"subscription"}
+{"merchant":"왓챠 역삼점","amount_minor":"-17432","expected":"subscription"}
+{"merchant":"왓챠 판교점","amount_minor":"-25351","expected":"subscription"}
+{"merchant":"티빙","amount_minor":"-33270","expected":"subscription"}
+{"merchant":"티빙 강남점","amount_minor":"-41189","expected":"subscription"}
+{"merchant":"티빙 서울역점","amount_minor":"-49108","expected":"subscription"}
+{"merchant":"티빙 홍대점","amount_minor":"-57027","expected":"subscription"}
+{"merchant":"티빙 역삼점","amount_minor":"-64946","expected":"subscription"}
+{"merchant":"티빙 판교점","amount_minor":"-72865","expected":"subscription"}
+{"merchant":"디즈니플러스","amount_minor":"-80784","expected":"subscription"}
+{"merchant":"디즈니플러스 강남점","amount_minor":"-88703","expected":"subscription"}
+{"merchant":"디즈니플러스 서울역점","amount_minor":"-7622","expected":"subscription"}
+{"merchant":"디즈니플러스 홍대점","amount_minor":"-15541","expected":"subscription"}
+{"merchant":"디즈니플러스 역삼점","amount_minor":"-23460","expected":"subscription"}
+{"merchant":"디즈니플러스 판교점","amount_minor":"-31379","expected":"subscription"}
+{"merchant":"한국전력공사","amount_minor":"-39298","expected":"utilities"}
+{"merchant":"한국전력공사 강남점","amount_minor":"-47217","expected":"utilities"}
+{"merchant":"한국전력공사 서울역점","amount_minor":"-55136","expected":"utilities"}
+{"merchant":"한국전력공사 홍대점","amount_minor":"-63055","expected":"utilities"}
+{"merchant":"한국전력공사 역삼점","amount_minor":"-70974","expected":"utilities"}
+{"merchant":"한국전력공사 판교점","amount_minor":"-78893","expected":"utilities"}
+{"merchant":"서울도시가스","amount_minor":"-86812","expected":"utilities"}
+{"merchant":"서울도시가스 강남점","amount_minor":"-5731","expected":"utilities"}
+{"merchant":"서울도시가스 서울역점","amount_minor":"-13650","expected":"utilities"}
+{"merchant":"서울도시가스 홍대점","amount_minor":"-21569","expected":"utilities"}
+{"merchant":"서울도시가스 역삼점","amount_minor":"-29488","expected":"utilities"}
+{"merchant":"서울도시가스 판교점","amount_minor":"-37407","expected":"utilities"}
+{"merchant":"수도요금자동납부","amount_minor":"-45326","expected":"utilities"}
+{"merchant":"수도요금자동납부 강남점","amount_minor":"-53245","expected":"utilities"}
+{"merchant":"수도요금자동납부 서울역점","amount_minor":"-61164","expected":"utilities"}
+{"merchant":"수도요금자동납부 홍대점","amount_minor":"-69083","expected":"utilities"}
+{"merchant":"수도요금자동납부 역삼점","amount_minor":"-77002","expected":"utilities"}
+{"merchant":"수도요금자동납부 판교점","amount_minor":"-84921","expected":"utilities"}
+{"merchant":"래미안아파트관리비","amount_minor":"-3840","expected":"housing"}
+{"merchant":"래미안아파트관리비 강남점","amount_minor":"-11759","expected":"housing"}
+{"merchant":"래미안아파트관리비 서울역점","amount_minor":"-19678","expected":"housing"}
+{"merchant":"래미안아파트관리비 홍대점","amount_minor":"-27597","expected":"housing"}
+{"merchant":"래미안아파트관리비 역삼점","amount_minor":"-35516","expected":"housing"}
+{"merchant":"래미안아파트관리비 판교점","amount_minor":"-43435","expected":"housing"}
+{"merchant":"오피스텔월세","amount_minor":"-51354","expected":"housing"}
+{"merchant":"오피스텔월세 강남점","amount_minor":"-59273","expected":"housing"}
+{"merchant":"오피스텔월세 서울역점","amount_minor":"-67192","expected":"housing"}
+{"merchant":"오피스텔월세 홍대점","amount_minor":"-75111","expected":"housing"}
+{"merchant":"오피스텔월세 역삼점","amount_minor":"-83030","expected":"housing"}
+{"merchant":"오피스텔월세 판교점","amount_minor":"-1949","expected":"housing"}
+{"merchant":"서울대학교병원","amount_minor":"-9868","expected":"medical"}
+{"merchant":"서울대학교병원 강남점","amount_minor":"-17787","expected":"medical"}
+{"merchant":"서울대학교병원 서울역점","amount_minor":"-25706","expected":"medical"}
+{"merchant":"서울대학교병원 홍대점","amount_minor":"-33625","expected":"medical"}
+{"merchant":"서울대학교병원 역삼점","amount_minor":"-41544","expected":"medical"}
+{"merchant":"서울대학교병원 판교점","amount_minor":"-49463","expected":"medical"}
+{"merchant":"연세정형외과의원","amount_minor":"-57382","expected":"medical"}
+{"merchant":"연세정형외과의원 강남점","amount_minor":"-65301","expected":"medical"}
+{"merchant":"연세정형외과의원 서울역점","amount_minor":"-73220","expected":"medical"}
+{"merchant":"연세정형외과의원 홍대점","amount_minor":"-81139","expected":"medical"}
+{"merchant":"연세정형외과의원 역삼점","amount_minor":"-89058","expected":"medical"}
+{"merchant":"연세정형외과의원 판교점","amount_minor":"-7977","expected":"medical"}
+{"merchant":"화이트치과","amount_minor":"-15896","expected":"medical"}
+{"merchant":"화이트치과 강남점","amount_minor":"-23815","expected":"medical"}
+{"merchant":"화이트치과 서울역점","amount_minor":"-31734","expected":"medical"}
+{"merchant":"화이트치과 홍대점","amount_minor":"-39653","expected":"medical"}
+{"merchant":"화이트치과 역삼점","amount_minor":"-47572","expected":"medical"}
+{"merchant":"화이트치과 판교점","amount_minor":"-55491","expected":"medical"}
+{"merchant":"경희한의원","amount_minor":"-63410","expected":"medical"}
+{"merchant":"경희한의원 강남점","amount_minor":"-71329","expected":"medical"}
+{"merchant":"경희한의원 서울역점","amount_minor":"-79248","expected":"medical"}
+{"merchant":"경희한의원 홍대점","amount_minor":"-87167","expected":"medical"}
+{"merchant":"경희한의원 역삼점","amount_minor":"-6086","expected":"medical"}
+{"merchant":"경희한의원 판교점","amount_minor":"-14005","expected":"medical"}
+{"merchant":"온누리약국","amount_minor":"-21924","expected":"pharmacy"}
+{"merchant":"온누리약국 강남점","amount_minor":"-29843","expected":"pharmacy"}
+{"merchant":"온누리약국 서울역점","amount_minor":"-37762","expected":"pharmacy"}
+{"merchant":"온누리약국 홍대점","amount_minor":"-45681","expected":"pharmacy"}
+{"merchant":"온누리약국 역삼점","amount_minor":"-53600","expected":"pharmacy"}
+{"merchant":"온누리약국 판교점","amount_minor":"-61519","expected":"pharmacy"}
+{"merchant":"메디팜약국","amount_minor":"-69438","expected":"pharmacy"}
+{"merchant":"메디팜약국 강남점","amount_minor":"-77357","expected":"pharmacy"}
+{"merchant":"메디팜약국 서울역점","amount_minor":"-85276","expected":"pharmacy"}
+{"merchant":"메디팜약국 홍대점","amount_minor":"-4195","expected":"pharmacy"}
+{"merchant":"메디팜약국 역삼점","amount_minor":"-12114","expected":"pharmacy"}
+{"merchant":"메디팜약국 판교점","amount_minor":"-20033","expected":"pharmacy"}
+{"merchant":"영단기학원","amount_minor":"-27952","expected":"education"}
+{"merchant":"영단기학원 강남점","amount_minor":"-35871","expected":"education"}
+{"merchant":"영단기학원 서울역점","amount_minor":"-43790","expected":"education"}
+{"merchant":"영단기학원 홍대점","amount_minor":"-51709","expected":"education"}
+{"merchant":"영단기학원 역삼점","amount_minor":"-59628","expected":"education"}
+{"merchant":"영단기학원 판교점","amount_minor":"-67547","expected":"education"}
+{"merchant":"수학의정석학원","amount_minor":"-75466","expected":"education"}
+{"merchant":"수학의정석학원 강남점","amount_minor":"-83385","expected":"education"}
+{"merchant":"수학의정석학원 서울역점","amount_minor":"-2304","expected":"education"}
+{"merchant":"수학의정석학원 홍대점","amount_minor":"-10223","expected":"education"}
+{"merchant":"수학의정석학원 역삼점","amount_minor":"-18142","expected":"education"}
+{"merchant":"수학의정석학원 판교점","amount_minor":"-26061","expected":"education"}
+{"merchant":"cgv 용산","amount_minor":"-33980","expected":"culture"}
+{"merchant":"cgv 용산 강남점","amount_minor":"-41899","expected":"culture"}
+{"merchant":"cgv 용산 서울역점","amount_minor":"-49818","expected":"culture"}
+{"merchant":"cgv 용산 홍대점","amount_minor":"-57737","expected":"culture"}
+{"merchant":"cgv 용산 역삼점","amount_minor":"-65656","expected":"culture"}
+{"merchant":"cgv 용산 판교점","amount_minor":"-73575","expected":"culture"}
+{"merchant":"롯데시네마","amount_minor":"-81494","expected":"culture"}
+{"merchant":"롯데시네마 강남점","amount_minor":"-89413","expected":"culture"}
+{"merchant":"롯데시네마 서울역점","amount_minor":"-8332","expected":"culture"}
+{"merchant":"롯데시네마 홍대점","amount_minor":"-16251","expected":"culture"}
+{"merchant":"롯데시네마 역삼점","amount_minor":"-24170","expected":"culture"}
+{"merchant":"롯데시네마 판교점","amount_minor":"-32089","expected":"culture"}
+{"merchant":"메가박스","amount_minor":"-40008","expected":"culture"}
+{"merchant":"메가박스 강남점","amount_minor":"-47927","expected":"culture"}
+{"merchant":"메가박스 서울역점","amount_minor":"-55846","expected":"culture"}
+{"merchant":"메가박스 홍대점","amount_minor":"-63765","expected":"culture"}
+{"merchant":"메가박스 역삼점","amount_minor":"-71684","expected":"culture"}
+{"merchant":"메가박스 판교점","amount_minor":"-79603","expected":"culture"}
+{"merchant":"교보문고","amount_minor":"-87522","expected":"culture"}
+{"merchant":"교보문고 강남점","amount_minor":"-6441","expected":"culture"}
+{"merchant":"교보문고 서울역점","amount_minor":"-14360","expected":"culture"}
+{"merchant":"교보문고 홍대점","amount_minor":"-22279","expected":"culture"}
+{"merchant":"교보문고 역삼점","amount_minor":"-30198","expected":"culture"}
+{"merchant":"교보문고 판교점","amount_minor":"-38117","expected":"culture"}
+{"merchant":"예스24","amount_minor":"-46036","expected":"culture"}
+{"merchant":"예스24 강남점","amount_minor":"-53955","expected":"culture"}
+{"merchant":"예스24 서울역점","amount_minor":"-61874","expected":"culture"}
+{"merchant":"예스24 홍대점","amount_minor":"-69793","expected":"culture"}
+{"merchant":"예스24 역삼점","amount_minor":"-77712","expected":"culture"}
+{"merchant":"예스24 판교점","amount_minor":"-85631","expected":"culture"}
+{"merchant":"알라딘중고서점","amount_minor":"-4550","expected":"culture"}
+{"merchant":"알라딘중고서점 강남점","amount_minor":"-12469","expected":"culture"}
+{"merchant":"알라딘중고서점 서울역점","amount_minor":"-20388","expected":"culture"}
+{"merchant":"알라딘중고서점 홍대점","amount_minor":"-28307","expected":"culture"}
+{"merchant":"알라딘중고서점 역삼점","amount_minor":"-36226","expected":"culture"}
+{"merchant":"알라딘중고서점 판교점","amount_minor":"-44145","expected":"culture"}
+{"merchant":"유니클로","amount_minor":"-52064","expected":"clothing"}
+{"merchant":"유니클로 강남점","amount_minor":"-59983","expected":"clothing"}
+{"merchant":"유니클로 서울역점","amount_minor":"-67902","expected":"clothing"}
+{"merchant":"유니클로 홍대점","amount_minor":"-75821","expected":"clothing"}
+{"merchant":"달빛곱창","amount_minor":"-40180","expected":"food"}
+{"merchant":"달빛곱창 본점","amount_minor":"-40913","expected":"food"}
+{"merchant":"제이네과일가게","amount_minor":"-41646","expected":"groceries"}
+{"merchant":"제이네과일가게 본점","amount_minor":"-42379","expected":"groceries"}
+{"merchant":"동네빨래방","amount_minor":"-43112","expected":"unknown"}
+{"merchant":"동네빨래방 본점","amount_minor":"-43845","expected":"unknown"}
+{"merchant":"행운세탁소","amount_minor":"-44578","expected":"unknown"}
+{"merchant":"행운세탁소 본점","amount_minor":"-45311","expected":"unknown"}
+{"merchant":"초록화원","amount_minor":"-46044","expected":"unknown"}
+{"merchant":"초록화원 본점","amount_minor":"-46777","expected":"unknown"}
+{"merchant":"별밤포차","amount_minor":"-47510","expected":"food"}
+{"merchant":"별밤포차 본점","amount_minor":"-48243","expected":"food"}
+{"merchant":"우리들공방","amount_minor":"-48976","expected":"culture"}
+{"merchant":"우리들공방 본점","amount_minor":"-49709","expected":"culture"}
+{"merchant":"골목떡볶이","amount_minor":"-50442","expected":"food"}
+{"merchant":"골목떡볶이 본점","amount_minor":"-51175","expected":"food"}
+{"merchant":"하늘꽃집","amount_minor":"-51908","expected":"unknown"}
+{"merchant":"하늘꽃집 본점","amount_minor":"-52641","expected":"unknown"}
+{"merchant":"정든이발관","amount_minor":"-3374","expected":"beauty"}
+{"merchant":"정든이발관 본점","amount_minor":"-4107","expected":"beauty"}
+{"merchant":"소소한잡화점","amount_minor":"-4840","expected":"unknown"}
+{"merchant":"소소한잡화점 본점","amount_minor":"-5573","expected":"unknown"}
+{"merchant":"달려라철물","amount_minor":"-6306","expected":"unknown"}
+{"merchant":"달려라철물 본점","amount_minor":"-7039","expected":"unknown"}
+{"merchant":"바다낚시프라자","amount_minor":"-7772","expected":"unknown"}
+{"merchant":"바다낚시프라자 본점","amount_minor":"-8505","expected":"unknown"}
+{"merchant":"그린테니스장","amount_minor":"-9238","expected":"unknown"}
+{"merchant":"그린테니스장 본점","amount_minor":"-9971","expected":"unknown"}
+{"merchant":"한솔문구","amount_minor":"-10704","expected":"unknown"}
+{"merchant":"한솔문구 본점","amount_minor":"-11437","expected":"unknown"}
+{"merchant":"늘푸른청과","amount_minor":"-12170","expected":"groceries"}
+{"merchant":"늘푸른청과 본점","amount_minor":"-12903","expected":"groceries"}
+{"merchant":"만복부동산","amount_minor":"-13636","expected":"unknown"}
+{"merchant":"만복부동산 본점","amount_minor":"-14369","expected":"unknown"}
+{"merchant":"제일열쇠","amount_minor":"-15102","expected":"unknown"}
+{"merchant":"제일열쇠 본점","amount_minor":"-15835","expected":"unknown"}
+{"merchant":"희망세차장","amount_minor":"-16568","expected":"unknown"}
+{"merchant":"희망세차장 본점","amount_minor":"-17301","expected":"unknown"}
+{"merchant":"둥지공인중개사","amount_minor":"-18034","expected":"unknown"}
+{"merchant":"둥지공인중개사 본점","amount_minor":"-18767","expected":"unknown"}
