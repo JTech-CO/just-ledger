@@ -63,6 +63,7 @@ jobs:
             prolog:
               - *contracts
               - 'services/prolog/**'
+              - 'fixtures/classify/**'
             realtime:
               - *contracts
               - 'services/realtime/**'
