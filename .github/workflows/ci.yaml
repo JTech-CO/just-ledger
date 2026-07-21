@@ -197,7 +197,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with: { targets: wasm32-unknown-unknown, components: clippy,rustfmt }
+        with: { toolchain: 1.97.1, targets: wasm32-unknown-unknown, components: clippy,rustfmt }   # 컨테이너 확정 버전
       - uses: jetli/wasm-pack-action@v0.4.0
       - run: cd modules/statement-wasm && cargo fmt --check
       - run: cd modules/statement-wasm && cargo clippy -- -D warnings

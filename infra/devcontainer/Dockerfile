@@ -48,6 +48,7 @@ RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" \
 # --- 4. Rust + wasm 타깃 -----------------------------------------------------
 # 실제 버전은 레포 루트 rust-toolchain.toml 로 고정한다.
 RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable \
+ && rustup component add rustfmt clippy \
  && rustup target add wasm32-unknown-unknown \
  && cargo install wasm-pack --locked
 

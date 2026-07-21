@@ -44,3 +44,5 @@ cabal.project.freeze              linguist-generated=true
 # ---------------------------------------------------------------------------
 fixtures/**/*.dat                 binary
 modules/settlement/bin/**         binary
+# CP949 명세서 픽스처 — EOL/인코딩 정규화가 바이트를 깨뜨리면 안 된다
+fixtures/ingest/*.csv             -text

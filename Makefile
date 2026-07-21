@@ -121,12 +121,15 @@ test-ui: ## M8 — 컴포넌트 + 가상 스크롤
 # 불변식 게이트
 # ---------------------------------------------------------------------------
 
-.PHONY: parity-settlement check-no-float a11y
+.PHONY: parity-settlement check-no-float a11y bench-wasm
 parity-settlement: build-settlement ## INV-7 — COBOL vs JS 참조 구현, 차이 0원
 	node scripts/parity/settlement.mjs --fixtures fixtures/settlement --strict
 
 check-no-float: ## INV-4 — 금액이 Number/float 경유하는 경로 0개
 	node scripts/check-no-float.mjs apps/web services/worker
+
+bench-wasm: ## M3 DoD 3 — 50MB CSV 파싱 3초 이내 (wasm-pack 빌드 선행 필요)
+	node scripts/bench-wasm.mjs
 
 a11y: ## M8 — 접근성 검사
 	cd apps/web && pnpm test:a11y
