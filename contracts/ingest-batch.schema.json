@@ -8,6 +8,13 @@
   "required": ["id", "filename", "state"],
   "properties": {
     "id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "account_id": {
+      "description": "이 명세서가 속한 은행 계정 (draft txn 의 한쪽 다리).",
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/uuid" },
+        { "type": "null" }
+      ]
+    },
     "filename": {
       "description": "원본 파일명(표시용). 서버는 이 값을 subprocess 인자로 넘기지 않는다 (§7 보안).",
       "type": "string",

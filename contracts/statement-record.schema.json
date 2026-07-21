@@ -2,13 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://just-ledger.dev/contracts/statement-record.schema.json",
   "title": "statement_record",
-  "description": "정규화된 명세서 레코드 — Rust WASM 파서의 출력이자 골든 픽스처 기대 형식. 클라이언트 전용 산물이다: description/counterparty 가 포함된 이 형태는 절대 평문으로 서버에 전송·저장되지 않는다 (INV-6). 서버로 가는 것은 ingest-payload 의 최소 필드 + 암호화 blob 뿐.",
+  "description": "정규화된 명세서 레코드 — Rust WASM 파서의 출력이자 골든 픽스처 기대 형식. 클라이언트 전용 산물이다: description/counterparty/memo 가 포함된 이 형태는 절대 평문으로 서버에 전송·저장되지 않는다 (INV-6). 서버로 가는 것은 ingest-payload 의 최소 필드 + 암호화 blob 뿐.",
   "type": "object",
   "additionalProperties": false,
   "required": ["source_hash", "occurred_on", "amount_minor", "currency", "description"],
   "properties": {
     "source_hash": {
-      "description": "BLAKE3(normalize(일시) ‖ amount_minor ‖ normalize(상대처) ‖ 동일튜플 발생순번). 순번은 같은 파일 내 정당한 중복 거래(같은 날 같은 가게 같은 금액)의 유실을 막고, 재업로드 시에도 결정론적이라 중복 제거를 유지한다.",
+      "description": "keyed BLAKE3(fp_key; normalize(일시) ‖ amount_minor ‖ normalize(불변상점) ‖ 동일튜플 발생순번). fp_key 는 사용자 패스프레이즈 파생 비밀 키라 서버는 지문을 재계산할 수 없다(무키였다면 평문 일자·금액 + 상점명 사전으로 상대처 복원 가능 — INV-6 우회). 불변상점 = 상대처(있으면) 또는 적요이며 편집 가능한 메모는 제외한다(메모 변경으로 지문이 바뀌면 중복 제거가 깨짐). 순번은 정당한 중복 거래 유실 방지. 사용자별 고정 키라 재업로드 결정론 유지.",
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },
@@ -29,7 +29,14 @@
       "maxLength": 256
     },
     "counterparty": {
-      "description": "상대처/의뢰인/수취인 (있는 포맷만). 서버 평문 전송 금지.",
+      "description": "상대처/의뢰인/수취인 (있는 포맷만). 불변 필드 — 지문 상점 성분에 쓰인다. 서버 평문 전송 금지.",
+      "oneOf": [
+        { "type": "string", "maxLength": 256 },
+        { "type": "null" }
+      ]
+    },
+    "memo": {
+      "description": "사용자 메모 (토스 등). 거래 후 편집 가능한 가변 필드라 지문에 넣지 않는다. 서버 평문 전송 금지.",
       "oneOf": [
         { "type": "string", "maxLength": 256 },
         { "type": "null" }
