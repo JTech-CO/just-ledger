@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useLedgerStore } from '../store/ledgerStore.js';
 import LedgerTable from '../components/ledger/LedgerTable.jsx';
 import TxnForm from '../components/ledger/TxnForm.jsx';
+import IngestPanel from '../components/ledger/IngestPanel.jsx';
 import { formatMinor } from '../lib/money.js';
 
 export default function LedgerPage() {
@@ -53,6 +54,11 @@ export default function LedgerPage() {
       <section aria-label="수기 입력">
         <h2>수기 거래</h2>
         <TxnForm accounts={accounts} onSubmit={addTxn} />
+      </section>
+
+      <section aria-label="명세서 업로드">
+        <h2>명세서 업로드</h2>
+        <IngestPanel accounts={accounts} onDone={() => loadAll().catch(() => {})} />
       </section>
 
       <section aria-label="원장">

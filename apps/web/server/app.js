@@ -15,6 +15,7 @@ import healthRoutes from './routes/health.js';
 import accountRoutes from './routes/accounts.js';
 import txnRoutes from './routes/txns.js';
 import balanceRoutes from './routes/balances.js';
+import ingestRoutes from './routes/ingest.js';
 
 const PG_ERROR_MAP = {
   JL001: { status: 422, error: 'unbalanced', message: 'INV-1: 통화별 차변·대변이 일치해야 합니다' },
@@ -70,6 +71,7 @@ export async function buildApp(opts) {
   await app.register(accountRoutes);
   await app.register(txnRoutes);
   await app.register(balanceRoutes);
+  await app.register(ingestRoutes);
 
   app.addHook('onClose', async () => {
     await appPool.end();

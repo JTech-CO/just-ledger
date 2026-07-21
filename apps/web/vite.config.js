@@ -1,10 +1,20 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
+
+// statement-wasm 은 wasm-pack --target web 산출물(modules/statement-wasm/pkg).
+// gitignore 라 빌드 전 `wasm-pack build` 가 선행돼야 한다 (Makefile build-web / CI).
+const wasmPkg = fileURLToPath(new URL('../../modules/statement-wasm/pkg', import.meta.url));
 
 // 클라이언트 루트는 client/. 빌드 산출물은 apps/web/dist (gitignore).
 export default defineConfig({
   root: 'client',
   plugins: [react()],
+  resolve: {
+    alias: { 'statement-wasm': wasmPkg },
+  },
+  // .wasm 을 자산으로 (statement_wasm_bg.wasm?url)
+  assetsInclude: ['**/*.wasm'],
   build: {
     outDir: '../dist',
     emptyOutDir: true,
