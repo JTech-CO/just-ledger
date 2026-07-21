@@ -6,11 +6,21 @@
 
 ## 현재 phase
 
-**M3 — 인제스트 파이프라인 (Rust WASM + Go)** (착수 전)
+**M3 — 인제스트 파이프라인 (Rust WASM + Go)** (M3-A Rust ✔·M3-B Go 워커 ✔ — 남은 것: M3-C 웹 연결)
 
-M0·M1·M2 게이트 통과(전부 2026-07-21). M2 실측: 로컬 컨테이너 + CI 런 29802235905(web 잡 첫 활성화) 양쪽 그린 — lint, `make check-no-float` 0건, test:api 16/16, test:ui 12/12(브라우저 경로 왕복 무손실), build, M1 db 회귀. 적대적 검증 5렌즈 19건 전부 수정.
+M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3종 = **하나·국민·토스뱅크** (사용자 확정).
 
-> M3 착수 전 결정 필요: **미결질문 #3 — 은행 CSV 골든 픽스처 3종 포맷** (사용자 결정)
+**M3 완료분 (로컬 컨테이너 실측 그린):**
+- M3-A Rust `statement-wasm`: 3사 파서(CP949/UTF-8 BOM·따옴표 천단위·`△` 음수·전각 NFKC), keyed BLAKE3 지문, Argon2id+ChaCha20-Poly1305(AAD) 봉투. cargo test 31종(골든 4)·fmt·clippy·CI wasm 잡 그린. `make bench-wasm` 웜 UTF-8 1704ms·CP949 1465ms ≤ 3000ms (DoD 3, 게이트는 웜 — 아래 예열 항목 참조)
+- M3-B Go `services/worker`: DB 상태기계 큐(+소켓 nudge)·인제스트 프로세서(draft 생성)·환율 폴러(유리수 쌍). go test 그린 — **DoD 2**(재업로드 신규 0)·**DoD 5**(미완료 배치 재개·멱등)·INV-6 서버측(DB·로그 평문 부재) 실측
+- db 확장: ingest_batch.account_id(복합 FK)·ingest_payload 테이블·fn_pending_ingest_batches(DEFINER 최소 투영)·RLS — `make test-db` 회귀 그린
+- 적대적 검증 4렌즈 10건 전부 처리 (blocker 0): keyed 지문(무키 사전공격 차단), 토스 메모 지문 분리(가변 필드 중복제거 파괴), nonce/파라미터 봉투 강건성, AAD blob 스왑 거절, 공란 금액, CP949 벤치 경로
+
+**남은 M3-C (웹 연결 — JavaScript 세션):**
+1. `POST /api/ingest` (봉투 계약 검증 → batch+payload 저장 → 워커 소켓 nudge)
+2. 클라이언트 Web Worker 로 wasm 구동 + **기동 시 예열 호출** — ★ bench-wasm 웜 게이트의 전제 조건. 예열 없이는 첫 파싱이 콜드(~2.5s@50MB 소형은 무관)로 돈다
+3. 파일 드롭 → 파싱 → 패스프레이즈 → 업로드 → 진행 상태 UI 최소판
+4. M3 DoD 3의 '메인 스레드 롱태스크 0'은 Worker 실행 구조로 충족 — M8 프로파일로 재확인
 
 ---
 
@@ -106,6 +116,9 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). M2 실측: 로컬 컨테이너 +
 | 2026-07-20 | `contracts/{common,account,entry,txn,ingest-batch,notify-event}.schema.json` | M0 골격 신설 (SSOT 최초 정의) | 소비 예정: web(M2), db(M1), statement-wasm(M3), settlement(M5), realtime(M7). 현재 소비자 코드 없음 | 계약만 (소비자는 각 phase) |
 | 2026-07-21 | `contracts/account.schema.json` | `code` 유니크 스코프를 전역→**소유자 내**로 설명 변경(존재 오라클·사용자 간 충돌 차단, 적대 검증 발견). JSON Schema 는 유니크성을 표현 못 하므로 pattern 불변, description 만 갱신 | db(M1, 반영됨: `UNIQUE(owner_id, code)`), web(M2 소비 시 반영) | db ✔ / web ✔ |
 | 2026-07-21 | `contracts/balance.schema.json` (신설), `notify-event.schema.json` | 잔액 row 형태를 별도 계약으로 추출, notify-event 의 balance_changed.row 가 `$ref` 로 공유 — **와이어 형태 불변**(db NOTIFY 검증 그린 실측) | db(변경 불요, 실측 확인), web(M2 잔액 API 소비), realtime(M7 소비 예정) | db ✔ / web ✔ / realtime 대기 |
+| 2026-07-21 | `contracts/statement-record.schema.json`, `ingest-payload.schema.json` (신설) | 인제스트 계약: 정규화 레코드(클라이언트 전용·평문 서버 금지) + 업로드 봉투(서버 가시 최소 필드 + 암호화 blob) | statement-wasm(M3-A ✔), worker(M3-B ✔ — 봉투 records 소비), web(M3-C 업로드 API 대기) | wasm ✔ / worker ✔ / web 대기 |
+| 2026-07-21 | `statement-record.schema.json` (개정) | source_hash 를 **keyed BLAKE3**(패스프레이즈 파생 키)로, **memo 필드 신설**(가변 — 지문 제외). 적대 검증: 무키 지문은 서버 사전공격으로 상대처 복원 가능, 메모 포함 지문은 메모 편집만으로 중복제거 파괴 | statement-wasm ✔(골든 재생성·검토·동결), worker(지문 불투명 취급 — 무영향), web 대기 | wasm ✔ |
+| 2026-07-21 | `ingest-batch.schema.json` (개정) | `account_id`(선택) 추가 — 명세서가 속한 은행 계정(draft 다리) | db ✔(컬럼+복합 FK), worker ✔, web(M3-C 대기) | db ✔ / worker ✔ |
 
 ---
 
@@ -137,6 +150,11 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). M2 실측: 로컬 컨테이너 +
 | 2026-07-21 | **[M2] querystring 만 강제변환 ajv, body/params/응답은 엄격** | HTTP 쿼리는 항상 문자열 도착. 금액은 계약상 type:string 이라 변환 대상 아님(INV-4 안전). `useDefaults` 는 쿼리 인스턴스에만 |
 | 2026-07-21 | **[M2] 응답도 계약으로 '검증'(위반 500), fast-json-stringify 강제 변환 미사용** | 계약 위반 응답은 조용히 교정되지 않고 시끄럽게 실패해야 한다. 검증 부재 회귀는 테스트(미니 앱 위반 라우트→500)로 고정 |
 | 2026-07-21 | **[M2] 잔액도 계약 18자리 상한을 DB CHECK 로 강제** | entry 상한만으론 잔액 누적이 19자리(i64)로 계약(moneyMinor) 표현 밖에 도달 가능 → NOTIFY/API 직렬화가 계약 위반. account_balance CHECK 로 fail-closed (0001 은 pre-release 라 직접 수정, 결정 기록) |
+| 2026-07-21 | **[M3] 지문 = keyed BLAKE3 + 발생 순번, 상점 성분은 불변 필드만** | ① 무키면 서버가 평문 일자·금액 + 상점 사전으로 상대처 복원(INV-6 우회) → 패스프레이즈 파생 키(사용자 고정 → 재업로드 결정론 유지) ② 백서 공식 그대로면 정당한 동일 거래 유실 → 파일 내 순번 추가 ③ 가변 메모를 지문에 넣으면 편집만으로 중복제거 파괴 → memo 분리 |
+| 2026-07-21 | **[M3] 암호화 = Argon2id + ChaCha20-Poly1305(AAD), age 미사용** | age 의 패스프레이즈 모드는 scrypt 라 백서의 Argon2id 요구와 충돌 — Argon2id 우선. AAD(account_id‖file_hash)로 blob 스왑 거절, 봉투 파라미터 범위 강제(OOM 차단) |
+| 2026-07-21 | **[M3] 서버 가시 필드 = 지문·일자·금액·통화만, draft 는 은행 다리 1개** | 적요·상대처·메모는 blob 에만(INV-6). draft 는 불균형 허용이므로 은행 계정 한 다리만 만들고 상대 다리는 분류(M4)가 채운다 |
+| 2026-07-21 | **[M3] 워커 큐의 진실원천은 DB 상태 기계** | 소켓 nudge 는 힌트일 뿐 — 주기 스캔(fn_pending_ingest_batches)이 미완료 배치를 집으므로 강제 종료 후 재시작 시 자동 재개(DoD 5). draft 생성은 ON CONFLICT 멱등 |
+| 2026-07-21 | **[M3] bench-wasm 게이트는 웜(티어업 후), 콜드는 참고 보고** | V8 는 wasm 을 Liftoff 로 먼저 돌리고 백그라운드 TurboFan — 첫 대형 호출은 수 배 느림. 클라이언트 Worker 가 기동 시 예열(M3-C 필수 항목으로 추적). UTF-8·CP949 양 경로 계측 |
 
 ---
 
