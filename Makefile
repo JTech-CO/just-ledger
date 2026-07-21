@@ -99,8 +99,9 @@ test-classify: ## M4 — 분류 정확도 + 이체 매칭 거짓양성 0 (INV-8)
 test-sandbox: ## M4 — Lua 샌드박스 탈출 차단 + 타임아웃
 	cd services/worker && go test ./sandbox/...
 
-test-settlement: ## M5 — COBOL 마감 골든 테스트
+test-settlement: ## M5 — COBOL 마감 골든 + 고정폭 생성기 폭 초과 거절 (DoD 4)
 	cd modules/settlement && ./tests/run.sh
+	cd services/worker && go test ./settlement/...
 
 test-dsl: ## M5 — 규칙 DSL 파싱·타입검사
 	cd modules/rules-dsl && cabal test
