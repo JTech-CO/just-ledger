@@ -18,9 +18,12 @@ pub struct StatementRecord {
     pub currency: String,
     /// 적요 (NFKC·공백 축약 후)
     pub description: String,
-    /// 상대처 (있는 포맷만)
+    /// 상대처/의뢰인/수취인 (있는 포맷만). 지문 상점 성분에 사용될 수 있는 '불변' 필드다.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub counterparty: Option<String>,
+    /// 사용자 메모 (토스 등). 거래 후 언제든 편집되는 '가변' 필드라 지문에 넣지 않는다.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memo: Option<String>,
     /// 거래 후 잔액 (있는 포맷만)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub balance_minor: Option<String>,

@@ -7,6 +7,15 @@ use crate::error::ParseError;
 /// 계약 moneyMinor 상한: 최대 18자리 (i64 안전 범위)
 const MAX_ABS: i64 = 999_999_999_999_999_999;
 
+/// Split 포맷(출금/입금 분리)에서 미해당 칸은 은행마다 '0' 또는 '공란'이다.
+/// 공란을 0으로 해석한다 — 출금·입금 중 한쪽만 값이 있으므로 조용한 절삭 위험이 없다.
+pub fn parse_amount_or_zero(raw: &str, row: usize) -> Result<i64, ParseError> {
+    if raw.trim().is_empty() {
+        return Ok(0);
+    }
+    parse_amount(raw, row)
+}
+
 /// "4,500" / "△52000" / "(1,000)" / "+1250" / "-3,200" / "0" → i64
 pub fn parse_amount(raw: &str, row: usize) -> Result<i64, ParseError> {
     let s = raw.trim();
@@ -86,6 +95,15 @@ mod tests {
         assert!(parse_amount("12a3", 1).is_err());
         assert!(parse_amount("", 1).is_err());
         assert!(parse_amount("△", 1).is_err());
+    }
+
+    #[test]
+    fn or_zero_treats_blank_as_zero() {
+        assert_eq!(parse_amount_or_zero("", 1).unwrap(), 0);
+        assert_eq!(parse_amount_or_zero("  ", 1).unwrap(), 0);
+        assert_eq!(parse_amount_or_zero("4,500", 1).unwrap(), 4500);
+        // 공란이 아닌 쓰레기는 여전히 거절 (조용한 절삭 금지)
+        assert!(parse_amount_or_zero("1.5", 1).is_err());
     }
 
     #[test]

@@ -1,8 +1,9 @@
 //! statement-wasm — 명세서 파싱·정규화·지문·암호화 (브라우저 Web Worker 에서 실행).
 //!
-//! 흐름 (백서 §4.2-2): 파일 드롭 → 파싱·정규화·BLAKE3 지문 → 암호화 → 업로드.
-//! 서버 가시 필드는 지문·일자·금액·통화뿐이고, 적요·상대처는 cipher.blob 안에만
-//! 있다 (INV-6). 계약: contracts/statement-record.schema.json, ingest-payload.schema.json.
+//! 흐름 (백서 §4.2-2): 패스프레이즈 입력 → 파일 드롭 → 파싱·정규화·keyed BLAKE3 지문
+//! → 암호화 → 업로드. 서버 가시 필드는 지문·일자·금액·통화뿐이고, 적요·상대처·메모는
+//! cipher.blob 안에만 있다 (INV-6). 지문은 패스프레이즈 파생 키로 keyed 라 서버가
+//! 재계산할 수 없다. 계약: contracts/statement-record.schema.json, ingest-payload.schema.json.
 
 pub mod amount;
 pub mod crypto;
@@ -38,8 +39,17 @@ pub struct IngestPayload {
     pub cipher: crypto::CipherBox,
 }
 
-/// 파싱된 전체 레코드 → 업로드 봉투.
-/// 전체 레코드(JSON)는 암호화 blob 으로만 실린다.
+/// AEAD AAD = account_id ‖ US ‖ file_hash. 봉투의 서버 가시 필드에 blob 을 바인딩해
+/// 다른 봉투로의 blob 스왑을 복호화 단계에서 거절한다.
+fn cipher_aad(account_id: &str, file_hash: &str) -> Vec<u8> {
+    let mut aad = Vec::with_capacity(account_id.len() + file_hash.len() + 1);
+    aad.extend_from_slice(account_id.as_bytes());
+    aad.push(0x1F);
+    aad.extend_from_slice(file_hash.as_bytes());
+    aad
+}
+
+/// 파싱된 전체 레코드 → 업로드 봉투. 전체 레코드(JSON)는 암호화 blob 으로만 실린다.
 pub fn build_payload(
     parsed: &[StatementRecord],
     passphrase: &str,
@@ -47,14 +57,16 @@ pub fn build_payload(
     filename: &str,
     file_bytes: &[u8],
 ) -> Result<IngestPayload, ParseError> {
+    let file_hash = blake3::hash(file_bytes).to_hex().to_string();
     let full_json = serde_json::to_string(parsed)
         .map_err(|e| ParseError::Format(format!("직렬화 실패: {e}")))?;
-    let cipher = crypto::encrypt(full_json.as_bytes(), passphrase)?;
+    let aad = cipher_aad(account_id, &file_hash);
+    let cipher = crypto::encrypt(full_json.as_bytes(), passphrase, &aad)?;
 
     Ok(IngestPayload {
         account_id: account_id.to_owned(),
         filename: filename.to_owned(),
-        file_hash: blake3::hash(file_bytes).to_hex().to_string(),
+        file_hash,
         record_count: parsed.len() as u32,
         records: parsed
             .iter()
@@ -71,17 +83,19 @@ pub fn build_payload(
 
 // ── wasm-bindgen 경계 (JSON 문자열 왕복 — 금액은 어차피 문자열) ──────────────
 
+/// 파싱 + keyed 지문. passphrase 로 지문 전용 키를 파생한다 (서버는 이 키를 모른다).
 #[wasm_bindgen]
-pub fn parse_statement(bytes: &[u8]) -> Result<String, JsError> {
-    let parsed: Parsed = parse::parse_statement_bytes(bytes).map_err(to_js)?;
+pub fn parse_statement(bytes: &[u8], passphrase: &str) -> Result<String, JsError> {
+    let key = parse::derive_fingerprint_key(passphrase);
+    let parsed: Parsed = parse::parse_statement_bytes(bytes, &key).map_err(to_js)?;
     serde_json::to_string(&parsed).map_err(|e| JsError::new(&e.to_string()))
 }
 
-/// 파싱만 하고 건수만 반환 — 업로드 전 사전 스캔(진행률 총량 산출)용이자,
-/// 벤치에서 파싱↔직렬화 비용을 분해 계측하는 데 쓴다.
+/// 파싱만 하고 건수 반환 — 업로드 전 사전 스캔(진행률 총량)·벤치 계측용.
 #[wasm_bindgen]
-pub fn parse_statement_count(bytes: &[u8]) -> Result<u32, JsError> {
-    let parsed = parse::parse_statement_bytes(bytes).map_err(to_js)?;
+pub fn parse_statement_count(bytes: &[u8], passphrase: &str) -> Result<u32, JsError> {
+    let key = parse::derive_fingerprint_key(passphrase);
+    let parsed = parse::parse_statement_bytes(bytes, &key).map_err(to_js)?;
     Ok(parsed.records.len() as u32)
 }
 
@@ -100,12 +114,14 @@ pub fn build_ingest_payload(
     serde_json::to_string(&payload).map_err(|e| JsError::new(&e.to_string()))
 }
 
-/// 로컬 표시·검증용 복호화 (서버는 이 함수를 가질 수 없다 — 키가 없으므로)
+/// 로컬 표시·검증용 복호화 (서버는 이 함수를 가질 수 없다 — 키가 없으므로).
+/// AAD 로 봉투 필드를 바인딩해 blob 스왑을 거절한다.
 #[wasm_bindgen]
 pub fn decrypt_ingest_blob(payload_json: &str, passphrase: &str) -> Result<String, JsError> {
     let payload: IngestPayload =
         serde_json::from_str(payload_json).map_err(|e| JsError::new(&e.to_string()))?;
-    let plain = crypto::decrypt(&payload.cipher, passphrase).map_err(to_js)?;
+    let aad = cipher_aad(&payload.account_id, &payload.file_hash);
+    let plain = crypto::decrypt(&payload.cipher, passphrase, &aad).map_err(to_js)?;
     String::from_utf8(plain).map_err(|e| JsError::new(&e.to_string()))
 }
 
@@ -117,12 +133,13 @@ fn to_js(e: ParseError) -> JsError {
 mod tests {
     use super::*;
 
-    /// M3 DoD 4 의 축소판: 업로드 봉투 바이트에 평문 적요·상대처가 없어야 한다
+    /// M3 DoD 4 의 축소판: 업로드 봉투 바이트에 평문 적요·상대처·메모가 없어야 한다
     #[test]
     fn payload_contains_no_plaintext_description() {
         let csv = "\u{FEFF}거래 일시,적요,거래 유형,거래 금액,거래 후 잔액,메모\n\
                    2026-06-01 08:12:45,스타벅스 강남점,체크카드,-4500,150800,회사근처\n";
-        let parsed = parse::parse_statement_bytes(csv.as_bytes()).unwrap();
+        let key = parse::derive_fingerprint_key("패스프레이즈");
+        let parsed = parse::parse_statement_bytes(csv.as_bytes(), &key).unwrap();
         let payload = build_payload(
             &parsed.records,
             "패스프레이즈",
@@ -133,18 +150,38 @@ mod tests {
         .unwrap();
         let wire = serde_json::to_string(&payload).unwrap();
         assert!(!wire.contains("스타벅스"));
-        assert!(!wire.contains("회사근처"));
-        // 금액·일자·지문(서버가 원장 구성에 필요한 최소)은 존재
+        assert!(!wire.contains("회사근처")); // 메모도 blob 안에만
         assert!(wire.contains("-4500"));
         assert!(wire.contains("2026-06-01"));
 
-        // 복호화하면 전체 레코드가 복원된다
+        // 복호화하면 전체 레코드(메모 포함)가 복원된다
         let payload_json = serde_json::to_string(&payload).unwrap();
         let payload_back: IngestPayload = serde_json::from_str(&payload_json).unwrap();
-        let plain = crypto::decrypt(&payload_back.cipher, "패스프레이즈").unwrap();
+        let aad = cipher_aad(&payload_back.account_id, &payload_back.file_hash);
+        let plain = crypto::decrypt(&payload_back.cipher, "패스프레이즈", &aad).unwrap();
         let restored: Vec<record::StatementRecord> =
             serde_json::from_str(std::str::from_utf8(&plain).unwrap()).unwrap();
         assert_eq!(restored, parsed.records);
         assert_eq!(restored[0].description, "스타벅스 강남점");
+        assert_eq!(restored[0].memo.as_deref(), Some("회사근처"));
+    }
+
+    /// blob 을 다른 봉투(account_id 변조)로 스왑하면 복호화 거절 (AAD 바인딩)
+    #[test]
+    fn blob_swap_rejected() {
+        let csv = "\u{FEFF}거래 일시,적요,거래 유형,거래 금액,거래 후 잔액,메모\n\
+                   2026-06-01 08:12:45,가게,체크카드,-1000,1000,\n";
+        let key = parse::derive_fingerprint_key("pw");
+        let parsed = parse::parse_statement_bytes(csv.as_bytes(), &key).unwrap();
+        let mut payload =
+            build_payload(&parsed.records, "pw", "acct-A", "s.csv", csv.as_bytes()).unwrap();
+        payload.account_id = "acct-B".to_owned(); // 봉투 변조
+                                                  // decrypt_ingest_blob 와 동일 경로 (wasm-bindgen 래퍼는 네이티브 테스트 불가 —
+                                                  // JsError 가 wasm 전용이라 내부 API 로 같은 의미를 검증한다)
+        let aad = cipher_aad(&payload.account_id, &payload.file_hash);
+        assert!(crypto::decrypt(&payload.cipher, "pw", &aad).is_err());
+        // 원본 봉투 필드면 성공 (대조군)
+        let aad_ok = cipher_aad("acct-A", &payload.file_hash);
+        assert!(crypto::decrypt(&payload.cipher, "pw", &aad_ok).is_ok());
     }
 }

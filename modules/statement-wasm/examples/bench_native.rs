@@ -1,7 +1,7 @@
 //! 네이티브 파싱 벤치 — wasm 배수 파악용 (cargo run --release --example bench_native).
 //! DoD 3 의 정본 계측은 make bench-wasm (wasm 경로).
 
-use statement_wasm::parse::parse_statement_bytes;
+use statement_wasm::parse::{derive_fingerprint_key, parse_statement_bytes};
 use std::time::Instant;
 
 fn main() {
@@ -44,8 +44,9 @@ fn main() {
     println!("합성 CSV: {:.1}MB, {}행", csv.len() as f64 / 1048576.0, i);
 
     let bytes = csv.as_bytes();
+    let key = derive_fingerprint_key("bench");
     let t = Instant::now();
-    let parsed = parse_statement_bytes(bytes).unwrap();
+    let parsed = parse_statement_bytes(bytes, &key).unwrap();
     println!(
         "네이티브 파싱: {}건, {}ms",
         parsed.records.len(),

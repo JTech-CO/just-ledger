@@ -6,7 +6,7 @@
     "description": "GS25 서울역점",
     "occurred_on": "2026-06-01",
     "occurred_time": "08:12:45",
-    "source_hash": "d4afe64dca2a539178c2c9c2cf35a622b31804f8ecda9d0bdbaf2ed0cd5a91bb"
+    "source_hash": "58b16c4c2d94e612c051f5392f9fc5b55b9e9277ffe042a9db7fe0946bc5c861"
   },
   {
     "amount_minor": "-3200",
@@ -15,17 +15,17 @@
     "description": "GS25 서울역점",
     "occurred_on": "2026-06-01",
     "occurred_time": "08:12:45",
-    "source_hash": "e45c4c6a3ed2dc7ee7a3bb0223ebddadaa6b659fb42c22ba65f896f8abe9e0d9"
+    "source_hash": "5386aeef71bb3fe081ef2626b551f038617ef73197d8cf15b868be8b7dc76986"
   },
   {
     "amount_minor": "-45000",
     "balance_minor": "102600",
-    "counterparty": "모임회비",
     "currency": "KRW",
     "description": "친구에게 보냄",
+    "memo": "모임회비",
     "occurred_on": "2026-06-10",
     "occurred_time": "21:15:03",
-    "source_hash": "0ab44ba2417bf71b5b295cc359156337047980ad4cc480e385fc0daf78160c09"
+    "source_hash": "83b63b378a5a3b39ce4be68964bec90ffe7c84d8b33e5519ac1f06e90f192c27"
   },
   {
     "amount_minor": "1250",
@@ -34,6 +34,6 @@
     "description": "이자",
     "occurred_on": "2026-06-25",
     "occurred_time": "14:00:00",
-    "source_hash": "7cb655b34b437315fd10c285688ea7e24d1e72b1c7bd4c5773e520f48ce4b654"
+    "source_hash": "c672c16a36b178f4fdc4c551ec166dde8f56a0e7b5e459ee8e576e88af1d1e55"
   }
 ]
