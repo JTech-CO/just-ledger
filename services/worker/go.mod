@@ -2,7 +2,10 @@ module just-ledger/worker
 
 go 1.26
 
-require github.com/jackc/pgx/v5 v5.7.2
+require (
+	github.com/jackc/pgx/v5 v5.7.2
+	github.com/yuin/gopher-lua v1.1.2
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
