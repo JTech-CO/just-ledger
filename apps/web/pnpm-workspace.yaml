@@ -1,0 +1,4 @@
+# pnpm 공급망 정책: 빌드 스크립트 실행 허용 목록.
+# esbuild 만 postinstall 을 실행한다 (vite 의 네이티브 바이너리 설치).
+allowBuilds:
+  esbuild: true

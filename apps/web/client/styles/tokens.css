@@ -1,0 +1,90 @@
+/* Design Tokens — 디자인 백서 §5 와 1:1. 이 파일 밖의 하드코딩 색상 금지 (CI/리뷰 게이트).
+   중성색 cool gray 1계열 + accent 1색 + 상태 3색. 그라데이션 금지. */
+
+:root {
+  /* §5.1 Light */
+  --bg: #F6F7F8;
+  --surface: #FFFFFF;
+  --row-hover: #F1F3F5;
+  --border: #E1E4E8;
+  --border-strong: #C9CED4;
+  --text: #14181C;
+  --text-muted: #626C76;
+  --accent: #14506B;
+  --positive: #0F5C3F;
+  --negative: #8C2F26;
+  --warning: #8A5A00;
+
+  /* §5.2 Typography */
+  --font-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* §5.3 Spacing scale — 이외 임의값 금지 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  /* §5.3 곡률·고도·모션 */
+  --radius: 3px;
+  --shadow-float: 0 8px 24px rgba(20, 24, 28, 0.12); /* 모달·드롭다운·토스트 전용 */
+  --dur-color: 120ms;
+  --dur-toggle: 160ms;
+  --ease: ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14181C;
+    --surface: #1B2026;
+    --row-hover: #232A31;
+    --border: #2C333A;
+    --border-strong: #3D454D;
+    --text: #E4E7EA;
+    --text-muted: #98A2AC;
+    --accent: #57A8C4;
+    --positive: #4FA37C;
+    --negative: #D97A6E;
+    --warning: #C79A3E;
+  }
+}
+
+/* 수동 토글(§2.1) — localStorage 로 저장된 명시 테마가 자동 감지를 이긴다 */
+:root[data-theme='light'] {
+  --bg: #F6F7F8;
+  --surface: #FFFFFF;
+  --row-hover: #F1F3F5;
+  --border: #E1E4E8;
+  --border-strong: #C9CED4;
+  --text: #14181C;
+  --text-muted: #626C76;
+  --accent: #14506B;
+  --positive: #0F5C3F;
+  --negative: #8C2F26;
+  --warning: #8A5A00;
+}
+
+:root[data-theme='dark'] {
+  --bg: #14181C;
+  --surface: #1B2026;
+  --row-hover: #232A31;
+  --border: #2C333A;
+  --border-strong: #3D454D;
+  --text: #E4E7EA;
+  --text-muted: #98A2AC;
+  --accent: #57A8C4;
+  --positive: #4FA37C;
+  --negative: #D97A6E;
+  --warning: #C79A3E;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-color: 0ms;
+    --dur-toggle: 0ms;
+  }
+}

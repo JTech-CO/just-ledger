@@ -1,0 +1,40 @@
+{
+  "name": "@just-ledger/web",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "dev:client": "vite",
+    "gen:types": "node scripts/gen-typedefs.mjs",
+    "build": "node scripts/gen-typedefs.mjs && vite build",
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{js,jsx,mjs,css,json}\" --log-level warn",
+    "test:api": "vitest run tests/api.test.js",
+    "test:ui": "vitest run tests/money.test.js tests/ui.test.jsx"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "fastify": "^5.2.1",
+    "pg": "^8.13.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "happy-dom": "^16.5.3",
+    "prettier": "^3.4.2",
+    "vite": "^6.0.7",
+    "vitest": "^3.0.4"
+  }
+}

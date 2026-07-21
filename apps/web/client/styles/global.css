@@ -1,0 +1,85 @@
+/* Reset & Base + 전역 (M2 최소판 — 전체 확정은 M8) */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: keep-all;      /* §5.2 한글 처리 */
+  line-break: strict;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;   /* §5.2 자릿수 정렬 */
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: var(--sp-1) var(--sp-2);
+  transition: background-color var(--dur-color) var(--ease), border-color var(--dur-color) var(--ease);
+}
+
+button {
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+  font-weight: 500;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  background: var(--surface);
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--border);
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+}
+
+th {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+tbody tr:hover {
+  background: var(--row-hover);
+}
+
+td.amount {
+  text-align: right;
+}
+
+.positive { color: var(--positive); }
+.negative { color: var(--negative); }
+.muted { color: var(--text-muted); }
