@@ -145,6 +145,11 @@ jobs:
           sudo apt-get update && sudo apt-get install -y postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-18
+      # 클라이언트가 statement-wasm pkg 를 임포트 — vite 빌드 전에 wasm 산출 필요
+      - uses: dtolnay/rust-toolchain@stable
+        with: { toolchain: '1.97.1', targets: wasm32-unknown-unknown }
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - run: cd modules/statement-wasm && wasm-pack build --target web --release
       - run: cd apps/web && pnpm install --frozen-lockfile
       - run: cd apps/web && pnpm lint
       - run: make check-no-float

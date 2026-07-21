@@ -57,7 +57,7 @@ clean: ## 빌드 산출물 정리
 .PHONY: build build-web build-worker build-wasm build-dsl build-settlement build-realtime
 build: build-wasm build-dsl build-settlement build-worker build-realtime build-web ## 전체 빌드
 
-build-web: ## JavaScript — Fastify + React
+build-web: build-wasm ## JavaScript — Fastify + React (클라이언트가 wasm pkg 를 임포트)
 	cd apps/web && pnpm install --frozen-lockfile && pnpm build
 
 build-worker: ## Go — 워커 (Lua 샌드박스 포함)
