@@ -133,6 +133,18 @@ end
         @test ask("""not json""").ok === false
     end
 
+    @testset "T8 통계 경로 정밀도 (R 모듈과 대칭)" begin
+        mc(v) = ask("""{"kind":"montecarlo","seed":1,"iterations":100,"horizon_months":6,"initial_balance_minor":"$v","monthly_net_minor_history":["1","2","3","4","5","6"]}""")
+        # 2^53 = 9007199254740992 — 초과는 Float64 에서 조용히 잘리므로 거절
+        @test mc("9007199254740993").ok === false
+        @test mc("-9007199254740993").ok === false
+        @test mc("9007199254740992").ok === true      # 정확 표현 가능한 경계는 수용
+        # history 원소도 같은 가드를 받는다
+        @test ask("""{"kind":"montecarlo","seed":1,"iterations":100,"horizon_months":6,"initial_balance_minor":"0","monthly_net_minor_history":["1","2","3","4","5","9007199254740993"]}""").ok === false
+        # repayment 는 Int128 정수 산술이라 계약 상한(18자리)을 그대로 받는다
+        @test ask("""{"kind":"repayment","budget_minor":"999999999999999999","debts":[{"id":"big","balance_minor":"999999999999999999","rate_num":0,"rate_den":1,"min_payment_minor":"999999999999999999"}]}""").ok === true
+    end
+
     @testset "T7 프로토콜 형상" begin
         # 잘못된 줄이 있어도 나머지 줄은 계속 처리된다 (라인 1:1)
         p = tempname()

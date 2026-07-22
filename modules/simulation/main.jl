@@ -29,6 +29,19 @@ end
 # 계약 moneyMinor 와 동일 수용 집합: 최대 18자리, 선행 0 금지, 부호는 '-' 만.
 const MONEY_RE = r"^-?(0|[1-9][0-9]{0,17})$"
 
+# 2^53 — Float64 가 정수를 정확히 표현하는 한계.
+const MAX_EXACT_FLOAT = Int64(9007199254740992)
+
+# 통계 경로(Float64 경유)에 들어가는 금액의 정밀도 가드.
+# 계약(moneyMinor)은 18자리까지 허용하므로 Float64 로 내리면 하위 비트가 조용히
+# 잘린다. R 모듈(anomaly.R amounts_to_numeric)은 같은 값을 명시 거절하므로
+# 두 모듈의 계약을 대칭으로 맞춘다 — 침묵 손실 금지(INV-4 정신).
+function check_stat_range(v::Int64, field::AbstractString)::Int64
+    abs(v) > MAX_EXACT_FLOAT &&
+        throw(SimError("$field: 2^53 초과 금액은 통계 경로에서 다룰 수 없습니다"))
+    return v
+end
+
 function parse_money(v, field::AbstractString; allow_negative::Bool)::Int64
     v isa AbstractString || throw(SimError("$field 는 정수 문자열이어야 함"))
     occursin(MONEY_RE, v) || throw(SimError("$field 형식 오류 (최소 화폐 단위 정수 문자열)"))
@@ -121,13 +134,16 @@ function handle_montecarlo(obj)::String
     seed = req_int(obj, :seed, 0, typemax(Int64))   # seed 없으면 "seed 누락" 오류
     iterations = haskey(obj, :iterations) ? req_int(obj, :iterations, 1, 1_000_000) : Int64(10_000)
     horizon = req_int(obj, :horizon_months, 1, 120)
-    initial = parse_money(req_field(obj, :initial_balance_minor), "initial_balance_minor";
-                          allow_negative = true)
+    initial = check_stat_range(
+        parse_money(req_field(obj, :initial_balance_minor), "initial_balance_minor";
+                    allow_negative = true), "initial_balance_minor")
     hist_raw = req_field(obj, :monthly_net_minor_history)
     hist_raw isa AbstractVector || throw(SimError("monthly_net_minor_history 는 배열이어야 함"))
     length(hist_raw) >= 6 || throw(SimError("monthly_net_minor_history 는 6개 이상 필요"))
     # 금액 문자열 → 정수 검증 → 통계 내부에서만 Float64 사용
-    hist = Float64[Float64(parse_money(x, "monthly_net_minor_history[]"; allow_negative = true))
+    hist = Float64[Float64(check_stat_range(
+                       parse_money(x, "monthly_net_minor_history[]"; allow_negative = true),
+                       "monthly_net_minor_history[]"))
                    for x in hist_raw]
 
     dp, ci, quants = run_montecarlo(seed, iterations, horizon, initial, hist)
