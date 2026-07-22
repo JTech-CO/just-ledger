@@ -300,10 +300,16 @@ jobs:
           path: .r-libs
           key: r-libs-${{ hashFiles('modules/analytics/DEPENDS.lock') }}
       # P3M 날짜 스냅샷 — 컨테이너 실설치본(DEPENDS.lock)과 동일 버전 복원.
+      # 스냅샷 날짜는 DEPENDS.lock 이 SSOT (워크플로에 날짜를 두 벌 두지 않는다).
       # tests/run.R 의 version-lock 단언이 드리프트를 즉시 잡는다 (미결질문 #4 결정)
-      - run: |
-          mkdir -p .r-libs
-          Rscript -e 'install.packages(c("ggplot2","jsonlite","svglite"), repos="https://packagemanager.posit.co/cran/__linux__/noble/2026-07-20")'
+      - name: R 패키지 (DEPENDS.lock 스냅샷)
+        run: |
+          mkdir -p "$R_LIBS_USER"
+          SNAP=$(jq -r .snapshot modules/analytics/DEPENDS.lock)
+          echo "스냅샷: $SNAP → $R_LIBS_USER"
+          Rscript -e "install.packages(c('ggplot2','jsonlite','svglite'), lib = Sys.getenv('R_LIBS_USER'), repos = 'https://packagemanager.posit.co/cran/__linux__/noble/$SNAP')"
+          # 캐시가 빈 디렉터리를 담지 않도록 실제 설치를 확인한다
+          Rscript -e 'n <- length(list.files(Sys.getenv("R_LIBS_USER"))); cat("설치 패키지 수:", n, "\n"); stopifnot(n > 0)'
       - run: make test-analytics
 
   # ── Julia (시뮬레이션) ───────────────────────────────────────────────────
