@@ -99,6 +99,24 @@ sed -nE 's/.*with payload "(.*)" received from.*/\1/p' "$TMP/notify.out" > "$TMP
 echo "수신 페이로드 $(wc -l < "$TMP/payloads.jsonl")건"
 node db/tests/validate-notify.mjs < "$TMP/payloads.jsonl"
 
+# 소유자 격리(M7): 봉투 owner_id 가 실제 소유자와 일치해야 한다.
+# 실시간 경로에는 RLS 가 없으므로 이 대조가 테넌트 격리의 회귀 방어다.
+# psql 테이블 출력이라 선행 공백이 붙는다 — UUID 패턴으로 뽑는다
+OWNER1=$(sed -nE 's/.*OWNER1=([0-9a-fA-F-]{36}).*/\1/p' "$TMP/notify.out" | head -1)
+OWNER2=$(sed -nE 's/.*OWNER2=([0-9a-fA-F-]{36}).*/\1/p' "$TMP/notify.out" | head -1)
+if [ -z "$OWNER1" ] || [ -z "$OWNER2" ]; then
+  echo "FAIL: 소유자 id 추출 실패"; exit 1
+fi
+# UUID 자체로 대조한다 (jsonb::text 의 공백 표기에 의존하지 않는다)
+n1=$(grep -c "$OWNER1" "$TMP/payloads.jsonl" || true)
+n2=$(grep -c "$OWNER2" "$TMP/payloads.jsonl" || true)
+nother=$(grep -vc "$OWNER1\|$OWNER2" "$TMP/payloads.jsonl" || true)
+echo "owner1 $n1건 / owner2 $n2건 / 그 외 $nother건"
+if [ "$n1" -lt 1 ] || [ "$n2" -lt 1 ] || [ "$nother" -ne 0 ]; then
+  echo "FAIL: 봉투 owner_id 격리 위반 (그 외 소유자 페이로드 $nother건)"; exit 1
+fi
+echo "OK   소유자 격리: 모든 페이로드가 실제 소유자로 발행됨"
+
 step "정리"
 "${PSQL_ADMIN[@]}" -c "DROP DATABASE IF EXISTS ${TEST_DB} WITH (FORCE)"
 echo

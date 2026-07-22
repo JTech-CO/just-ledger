@@ -1,6 +1,9 @@
-// NOTIFY 페이로드를 contracts/notify-event.schema.json 으로 검증한다 (M1 DoD 6).
+// NOTIFY 페이로드를 contracts/notify-envelope.schema.json 으로 검증한다 (M1 DoD 6 / M7).
 // stdin: JSONL (한 줄 = 한 페이로드). run.sh 가 psql 출력에서 추출해 넘긴다.
 // 계약이 단일 진실원천이므로 여기서 구조를 재정의하지 않는다 — ajv 로 계약만 적용.
+//
+// 페이로드는 {owner_id, event} 봉투다(M7). 봉투 스키마가 event 를 notify-event 로
+// $ref 하므로, 봉투 검증 하나로 소유자 식별자와 브라우저 프레임을 함께 강제한다.
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -15,7 +18,7 @@ for (const f of readdirSync(contractsDir).filter((x) => x.endsWith('.schema.json
   const s = JSON.parse(readFileSync(join(contractsDir, f), 'utf8'));
   ajv.addSchema(s, s.$id);
 }
-const validate = ajv.getSchema('https://just-ledger.dev/contracts/notify-event.schema.json');
+const validate = ajv.getSchema('https://just-ledger.dev/contracts/notify-envelope.schema.json');
 
 let raw = '';
 process.stdin.setEncoding('utf8');
@@ -39,10 +42,10 @@ for (const [i, line] of lines.entries()) {
     continue;
   }
   if (validate(payload)) {
-    seenTypes.add(payload.type);
-    console.log(`OK   #${i + 1} ${payload.type}`);
+    seenTypes.add(payload.event.type);
+    console.log(`OK   #${i + 1} ${payload.event.type} (owner ${payload.owner_id.slice(0, 8)})`);
   } else {
-    console.error(`FAIL #${i + 1} ${payload.type ?? '?'}: ${JSON.stringify(validate.errors)}`);
+    console.error(`FAIL #${i + 1} ${payload?.event?.type ?? '?'}: ${JSON.stringify(validate.errors)}`);
     console.error(`     payload: ${line}`);
     fail = 1;
   }

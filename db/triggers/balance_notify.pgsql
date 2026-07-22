@@ -120,17 +120,28 @@ REVOKE ALL ON FUNCTION fn_bal_apply(uuid, char, bigint) FROM PUBLIC;
 REVOKE ALL ON FUNCTION fn_bal_apply_txn(uuid, int) FROM PUBLIC;
 
 -- ── NOTIFY: balance_changed ──────────────────────────────────────────────
+-- 페이로드는 contracts/notify-envelope.schema.json 봉투 — {owner_id, event}.
+-- 실시간 경로에는 RLS 가 적용되지 않으므로 owner_id 가 테넌트 격리의 근거다.
+-- SECURITY DEFINER: 소유자 조회가 호출자의 RLS 에 가려지면 안 된다(발행 누락 방지).
 CREATE OR REPLACE FUNCTION fn_notify_balance(p_account uuid, p_currency char(3))
 RETURNS void
 LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
 AS $$
   SELECT pg_notify('ledger_events', jsonb_build_object(
-    'type', 'balance_changed',
-    'row', jsonb_build_object(
-      'account_id', p_account,
-      'currency', p_currency::text,
-      'balance_minor', fn_account_balance(p_account, p_currency)::text
-    ))::text);
+    'owner_id', a.owner_id,
+    'event', jsonb_build_object(
+      'type', 'balance_changed',
+      'row', jsonb_build_object(
+        'account_id', p_account,
+        'currency', p_currency::text,
+        'balance_minor', fn_account_balance(p_account, p_currency)::text
+      ))
+    )::text)
+  FROM account a
+  WHERE a.id = p_account;
 $$;
 
 -- txn 상태 변경 문장 이후: posted 경계를 넘은 txn 들의 (계정, 통화) 쌍만 발행
@@ -230,9 +241,11 @@ AS $$
 BEGIN
   IF TG_OP = 'INSERT' OR OLD.state IS DISTINCT FROM NEW.state THEN
     PERFORM pg_notify('ledger_events', jsonb_build_object(
-      'type', 'ingest_progress',
-      'batch_id', NEW.id,
-      'state', NEW.state)::text);
+      'owner_id', NEW.owner_id,
+      'event', jsonb_build_object(
+        'type', 'ingest_progress',
+        'batch_id', NEW.id,
+        'state', NEW.state))::text);
   END IF;
   RETURN NULL;
 END $$;
@@ -250,10 +263,12 @@ AS $$
 BEGIN
   IF NEW.cobol_exit = 0 AND (TG_OP = 'INSERT' OR OLD.cobol_exit IS DISTINCT FROM NEW.cobol_exit) THEN
     PERFORM pg_notify('ledger_events', jsonb_build_object(
-      'type', 'settlement_done',
-      'period', jsonb_build_object(
-        'start', to_char(lower(NEW.period), 'YYYY-MM-DD'),
-        'end',   to_char(upper(NEW.period) - 1, 'YYYY-MM-DD')))::text);
+      'owner_id', NEW.owner_id,
+      'event', jsonb_build_object(
+        'type', 'settlement_done',
+        'period', jsonb_build_object(
+          'start', to_char(lower(NEW.period), 'YYYY-MM-DD'),
+          'end',   to_char(upper(NEW.period) - 1, 'YYYY-MM-DD'))))::text);
   END IF;
   RETURN NULL;
 END $$;

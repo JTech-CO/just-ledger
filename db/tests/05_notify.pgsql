@@ -66,5 +66,30 @@ BEGIN
     VALUES (v_owner, daterange('2026-05-01', '2026-06-01', '[)'), 0, '/reports/2026-05.txt');
 END $$;
 
+-- ── 소유자 격리(M7): 다른 소유자의 이벤트는 그 소유자의 owner_id 로 발행된다 ──
+-- 실시간 경로에는 RLS 가 적용되지 않으므로, 봉투의 owner_id 가 틀리면 남의
+-- 잔액이 다른 사용자에게 전달된다. run.sh 가 페이로드별 owner_id 를 대조한다.
+DO $$
+DECLARE
+  v_owner2 uuid; v_a uuid; v_b uuid; v_t uuid;
+BEGIN
+  INSERT INTO app_user (username) VALUES ('notify_owner2') RETURNING id INTO v_owner2;
+  INSERT INTO account (owner_id, code, name, type, currency)
+    VALUES (v_owner2, 'NTF.A', '알림A', 'asset', 'KRW') RETURNING id INTO v_a;
+  INSERT INTO account (owner_id, code, name, type, currency)
+    VALUES (v_owner2, 'NTF.B', '알림B', 'expense', 'KRW') RETURNING id INTO v_b;
+  INSERT INTO txn (owner_id, occurred_on) VALUES (v_owner2, '2026-06-02') RETURNING id INTO v_t;
+  INSERT INTO entry (txn_id, account_id, direction, amount_minor, currency) VALUES
+    (v_t, v_b, 'debit',  7700, 'KRW'),
+    (v_t, v_a, 'credit', 7700, 'KRW');
+  UPDATE txn SET status = 'posted', posted_at = now() WHERE id = v_t;
+END $$;
+
+SELECT 1 AS flush_owner2;
+
+-- 두 소유자의 id 를 출력해 run.sh 가 페이로드 owner_id 와 대조하게 한다
+SELECT 'OWNER1=' || id FROM app_user WHERE username = 'notify_owner';
+SELECT 'OWNER2=' || id FROM app_user WHERE username = 'notify_owner2';
+
 SELECT pg_sleep(0.2);
 SELECT 1 AS flush_final;
