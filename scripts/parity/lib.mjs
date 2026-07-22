@@ -45,6 +45,10 @@ export function settleReference(entries) {
   /** @type {Map<string, bigint>} */
   const bal = new Map();
   for (const e of entries) {
+    // 계약: D/C 외에는 부호를 추정하지 않는다 (COBOL 도 동일하게 즉시 중단)
+    if (e.direction !== 'D' && e.direction !== 'C') {
+      throw new RangeError(`direction ${JSON.stringify(e.direction)} (D|C 만 허용)`);
+    }
     const krw = convertToKrw(BigInt(e.amount_minor), BigInt(e.rate_num), BigInt(e.rate_den));
     const signed = e.direction === 'D' ? krw : -krw;
     bal.set(e.account_code, (bal.get(e.account_code) ?? 0n) + signed);
@@ -74,8 +78,12 @@ export function levelPayment(principal, num, den, n) {
 }
 
 /**
- * 상각 스케줄 참조. 각 회차 이자 = round_half_even(balance·num, den),
- * 원금 = A - 이자. 마지막 회차는 잔여를 흡수해 종료 잔액 0 (DoD 2).
+ * 상각 스케줄 참조 — copybook(amort-io.cpy) 의미론과 1:1.
+ * 각 회차 이자 = round_half_even(balance·num, den).
+ * k<n: 원금 = clamp(A - 이자, 0, 잔액) — 음수 상각 미표현·과다상환 방지.
+ * k=n: 원금 = 잔액 전액 흡수 → 종료 잔액 정확히 0 (DoD 2).
+ * 납입액 = 원금 + 이자 (정상 회차에서는 A 와 일치).
+ * 조기 완제 후 회차는 0·0·0 행. 모든 출력 값 ≥ 0 (unsigned PIC 9).
  * @returns {Array<{period: number, payment: string, interest: string,
  *   principal: string, balance: string}>}
  */
@@ -89,15 +97,14 @@ export function amortReference(principal, num, den, n) {
   for (let k = 1; k <= n; k += 1) {
     const interest = roundHalfEven(balance * N, D);
     let princ;
-    let payment;
     if (k === n) {
-      // 마지막 회차: 잔여 원금 전액 흡수
       princ = balance;
-      payment = princ + interest;
     } else {
       princ = A - interest;
-      payment = A;
+      if (princ < 0n) princ = 0n;
+      if (princ > balance) princ = balance;
     }
+    const payment = princ + interest;
     balance -= princ;
     rows.push({
       period: k,

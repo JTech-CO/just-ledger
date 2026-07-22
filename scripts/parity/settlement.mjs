@@ -52,7 +52,15 @@ function runCobol(bin, inputText) {
   if (r.status !== 0) {
     throw new Error(`${bin} 종료코드 ${r.status}: ${r.stderr}`);
   }
-  return r.stdout.split('\n').filter((l) => l.length > 0);
+  // 성공 경로에서 stderr 는 항상 비어 있어야 한다 — 침묵 무시 금지
+  if (r.stderr.length > 0) {
+    throw new Error(`${bin} 이 exit 0 인데 stderr 출력: ${r.stderr}`);
+  }
+  // 빈 줄을 걸러내지 않는다 — 사이사이 빈 줄 회귀도 diff 로 드러나야 한다.
+  // 마지막 개행이 만드는 종단 빈 요소 1개만 제거.
+  const lines = r.stdout.split('\n');
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+  return lines;
 }
 
 /** 두 라인 배열을 전 항목 비교, 불일치 목록 반환 */
@@ -68,7 +76,12 @@ function diffLines(expected, actual) {
 }
 
 // ── 1) 마감 정산: 픽스처 전체 — JS 참조 vs COBOL, 그리고 저장된 골든 검증 ──
-for (const f of readdirSync(fixturesDir).filter((x) => /^settle-.*\.in\.dat$/.test(x)).sort()) {
+// 픽스처가 사라져도 침묵 통과하지 않도록 최소 개수를 단언한다 (boundary+bulk).
+const settleFixtures = readdirSync(fixturesDir).filter((x) => /^settle-.*\.in\.dat$/.test(x)).sort();
+if (settleFixtures.length < 2) {
+  fail(`settle 픽스처가 ${settleFixtures.length}개 — 최소 2개(boundary·bulk) 필요. 이름 변경/삭제로 대조가 스킵되면 안 된다.`);
+}
+for (const f of settleFixtures) {
   const name = f.replace(/\.in\.dat$/, '');
   const inputText = readFileSync(join(fixturesDir, f), 'utf8');
   const entries = inputText.split('\n').filter((l) => l.length > 0).map(parseSettleIn);
@@ -107,6 +120,14 @@ for (const f of readdirSync(fixturesDir).filter((x) => /^settle-.*\.in\.dat$/.te
     }
   } else {
     pass(`amort: ${loans.length}개 대출 ${refLines.length}행 전 항목 일치`);
+  }
+  // 저장된 amort 골든도 살아있는 참조와 대조 (settle 과 동일한 stale 검사)
+  const amortGoldenPath = join(fixturesDir, 'amort.expected.dat');
+  if (!existsSync(amortGoldenPath)) {
+    fail('amort: 저장된 골든(amort.expected.dat)이 없음');
+  } else {
+    const golden = readFileSync(amortGoldenPath, 'utf8').split('\n').filter((l) => l.length > 0);
+    if (diffLines(refLines, golden).length > 0) fail('amort: 저장된 골든이 참조와 불일치 (stale)');
   }
   // 각 대출의 마지막 회차 종료 잔액이 양쪽 모두 정확히 0
   const byLoan = new Map();
