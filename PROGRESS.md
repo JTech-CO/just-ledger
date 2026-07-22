@@ -6,11 +6,16 @@
 
 ## 현재 phase
 
-**M5 — 정산 계층 (COBOL + Haskell)** (착수 전)
+**M6 — 분석 (R)** (착수 전)
 
-M0~M4 게이트 통과. **M4(2026-07-22):** Prolog 추론 서비스(분류 정확도 97.4%/500·이체 매칭 거짓양성 0·정기결제·1000건 0.02s) + Lua 샌드박스(탈출 11종 차단·100ms 타임아웃·메모리 폭탄 격리). plunit 19 + go sandbox 전 통과. 적대 검증 4렌즈 10건(INV-8 blocker 0) 전부 수정.
+M0~M5 게이트 통과. **M5(2026-07-22):** 정산 계층 완성 —
+- **COBOL**: `settle.cbl`(다통화 KRW 환산·계정 집계, NEAREST-EVEN) + `amort.cbl`(원리금 균등 상각, 마지막 회차 잔여 흡수 → 잔액 정확히 0). copybook 2종이 SSOT.
+- **JS 참조 정본** `scripts/parity/lib.mjs`(전 과정 BigInt) + INV-7 대조 하네스: 10,000 entry 마감 + 상각 481행 + **0.5 경계 전수 400건** — 폐형식·JS·COBOL 삼자 일치, **차이 0원**. 컨테이너(GnuCOBOL 3.2.0)와 CI(3.1.2) 이종 버전에서 골든 바이트 동일 실측.
+- **Go 사전 게이트**: PIC 폭·수치 범위(S9(18) 보수적 상계)·고유 계정 5000·회차 1..360 — COBOL 실행 전 거절 (DoD 4).
+- **Haskell 규칙 DSL**: megaparsec 파서·타입검사(통화 정합 포함)·정확 유리수 평가기·JSONL 프로토콜. 유효 20/오류 20+9종(전부 줄·열 exact)·parseMoney 14종 (DoD 5).
+- **적대 검증 4렌즈 19건 → 확증 15건 전부 수정** (blocker 2: COBOL 오버플로 침묵 절삭, CI 필터의 INV-7 게이트 우회). 성능: 마감 10,000 entry 193ms (≤2s).
 
-> **M5 진입 전 참고:** 미결질문 #2(GnuCOBOL COMP-3 바이트 재현성)는 컨테이너 이미지·`cobc` 플래그 고정으로 골든 픽스처 바이트 회귀 검증. M5 는 프로젝트 최중요 게이트(INV-7: COBOL↔JS 참조 구현 차이 0원)를 포함한다.
+**M4(2026-07-22):** Prolog 추론 서비스(분류 정확도 97.4%/500·이체 매칭 거짓양성 0·정기결제·1000건 0.02s) + Lua 샌드박스(탈출 11종 차단·100ms 타임아웃·메모리 폭탄 격리). plunit 19 + go sandbox 전 통과. 적대 검증 4렌즈 10건(INV-8 blocker 0) 전부 수정.
 
 **M3-C (웹 연결) 완료분:**
 - `POST /api/ingest`(봉투 계약 검증→batch+payload 원자 저장→202→워커 nudge, 실패 시 스캔 폴백) + `GET /api/ingest/:id` 상태 조회 — 통합 테스트 5종(202 왕복·400·INV-6 표면)
@@ -28,12 +33,6 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 - M3-B Go `services/worker`: DB 상태기계 큐(+소켓 nudge)·인제스트 프로세서(draft 생성)·환율 폴러(유리수 쌍). go test 그린 — **DoD 2**(재업로드 신규 0)·**DoD 5**(미완료 배치 재개·멱등)·INV-6 서버측(DB·로그 평문 부재) 실측
 - db 확장: ingest_batch.account_id(복합 FK)·ingest_payload 테이블·fn_pending_ingest_batches(DEFINER 최소 투영)·RLS — `make test-db` 회귀 그린
 - 적대적 검증 4렌즈 10건 전부 처리 (blocker 0): keyed 지문(무키 사전공격 차단), 토스 메모 지문 분리(가변 필드 중복제거 파괴), nonce/파라미터 봉투 강건성, AAD blob 스왑 거절, 공란 금액, CP949 벤치 경로
-
-**남은 M3-C (웹 연결 — JavaScript 세션):**
-1. `POST /api/ingest` (봉투 계약 검증 → batch+payload 저장 → 워커 소켓 nudge)
-2. 클라이언트 Web Worker 로 wasm 구동 + **기동 시 예열 호출** — ★ bench-wasm 웜 게이트의 전제 조건. 예열 없이는 첫 파싱이 콜드(~2.5s@50MB 소형은 무관)로 돈다
-3. 파일 드롭 → 파싱 → 패스프레이즈 → 업로드 → 진행 상태 UI 최소판
-4. M3 DoD 3의 '메인 스레드 롱태스크 0'은 Worker 실행 구조로 충족 — M8 프로파일로 재확인
 
 ---
 
@@ -71,9 +70,9 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 
 ## 다음 할 일
 
-1. push → CI web 잡(신규 활성화) 그린 확인 → M2 게이트 통과 표기
-2. **M3 착수** (Rust 단일 언어 세션): `modules/statement-wasm` — CSV/OFX/QIF 파서 → 정규화 → BLAKE3 지문 → Argon2id 키 파생·암호화 → wasm-pack 빌드. **착수 전 미결질문 #3(은행 CSV 골든 픽스처 3종 포맷) 결정 필요**
-3. M3 후반: Go 워커(큐·스케줄러·draft 생성·환율 폴링) — 어댑터 계약(worker.js 시그니처)에 맞춰 접속
+1. **M6 착수** (R 단일 언어 세션): `modules/analytics` — 월별 집계 통계·이상치 탐지·SVG 리포트. **착수 전 미결질문 #4(R 패키지 CRAN apt vs renv) 결정 필요**
+2. M6 병행 참고: worker 의 정산 오케스트레이션(월말 마감 스케줄 → BuildSettleInput → COBOL → 결과 DB 반영)은 M7 실시간 연동 때 접속 — 현재는 stdin/stdout 단독 실행 계약까지 완료
+3. 백서 §2.1/§3.1 버전 표기 개정(docs: 커밋) 미결 유지
 
 ---
 
@@ -88,7 +87,7 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | # | 질문 | 상태 |
 |---|---|---|
 | 1 | ~~Erlang/Elixir 설치 방식~~ | **해소(2026-07-21)**: `hexpm/elixir` 멀티스테이지 COPY 성공 — 실존 태그 `1.18.3-erlang-27.3.3-ubuntu-noble-20260509.1` 로 고정, `mix local.hex/rebar` 정상 |
-| 2 | GnuCOBOL 소스 빌드 vs 배포판 (`COMP-3` 재현성) | 소스 빌드 3.2.0 설치 성공. `COMP-3` 바이트 재현성은 M5 골든 픽스처에서 최종 검증 |
+| 2 | ~~GnuCOBOL 소스 빌드 vs 배포판 (`COMP-3` 재현성)~~ | **해소(2026-07-22, M5)**: 입출력을 DISPLAY 텍스트 고정폭으로 설계해 COMP-3(PACKED-DECIMAL) 바이트를 와이어에 노출하지 않음 — 재현성 문제가 구조적으로 소멸. 실증: 컨테이너 3.2.0 과 CI 배포판 3.1.2 가 동일 골든 바이트 산출 (settlement 잡 그린) |
 | 3 | 은행 CSV 골든 픽스처 3종 포맷 | M3 착수 전 결정 |
 | 4 | R 패키지 CRAN apt vs `renv` | M6 착수 전 결정 (R 4.3.3 확정을 전제로) |
 | 5 | 프로덕션 배포 대상 | M9 전까지 |
@@ -132,6 +131,9 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | 2026-07-21 | `contracts/statement-record.schema.json`, `ingest-payload.schema.json` (신설) | 인제스트 계약: 정규화 레코드(클라이언트 전용·평문 서버 금지) + 업로드 봉투(서버 가시 최소 필드 + 암호화 blob) | statement-wasm(M3-A ✔), worker(M3-B ✔ — 봉투 records 소비), web(M3-C 업로드 API 대기) | wasm ✔ / worker ✔ / web 대기 |
 | 2026-07-21 | `statement-record.schema.json` (개정) | source_hash 를 **keyed BLAKE3**(패스프레이즈 파생 키)로, **memo 필드 신설**(가변 — 지문 제외). 적대 검증: 무키 지문은 서버 사전공격으로 상대처 복원 가능, 메모 포함 지문은 메모 편집만으로 중복제거 파괴 | statement-wasm ✔(골든 재생성·검토·동결), worker(지문 불투명 취급 — 무영향), web 대기 | wasm ✔ |
 | 2026-07-21 | `ingest-batch.schema.json` (개정) | `account_id`(선택) 추가 — 명세서가 속한 은행 계정(draft 다리) | db ✔(컬럼+복합 FK), worker ✔, web(M3-C 대기) | db ✔ / worker ✔ |
+| 2026-07-22 | `modules/settlement/copybook/{settle-io,amort-io}.cpy` (신설) | 정산·상각 고정폭 레코드 SSOT — SETTLE-IN 81 / SETTLE-OUT 51 / AMORT-IN 67 / AMORT-OUT 79. 상각 A 는 JS 참조가 계산해 입력(AI-PAYMENT) | settlement ✔, worker(records.go 미러) ✔, parity(records.mjs 미러·gen.mjs) ✔ | 전부 ✔ |
+| 2026-07-22 | `settle-io.cpy`, `amort-io.cpy` (개정 — 적대검증) | 계약 한계 명문화: direction D\|C 강제, 고유 계정 ≤5000, S9(18) 범위 정책(생성기 사전 거절 + COBOL ON SIZE ERROR), AI-PERIODS 1..360, **상각 클램프 의미론**(원금 = clamp(A−이자, 0, 잔액) — 음수 상각 미표현) | settlement ✔, worker ✔, parity(lib/records.mjs) ✔ — 골든 재생성(LN0005 조기완제·LN0006 360회차 추가) | 전부 ✔ |
+| 2026-07-22 | rules-dsl JSONL 프로토콜 (개정 — 적대검증) | eval `txn.currency` **필수화**(리터럴 통화 ≠ txn 통화면 rule 불발 — 환산·근사 없음), 응답에 `skipped_budgets` 추가, `parseMoney` 를 contracts moneyMinor 패턴과 동일 수용 집합으로 | dsl ✔, worker/web(M7+ 소비 시 currency 전달 필요 — 어댑터 계약에 반영 예정) | dsl ✔ / 소비자 대기 |
 
 ---
 
@@ -184,9 +186,8 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | M1 데이터·영속화 | **통과** (`make test-db` 로컬 컨테이너 + CI 런 29787725390 db 잡 양쪽 그린 — INV-1/2/3/5 + RLS + NOTIFY 실측) | 2026-07-21 |
 | M2 API·서버 골격 | **통과** (로컬 + CI 런 29802235905 web 잡 그린 — DoD 1~5 실측) | 2026-07-21 |
 | M3 인제스트 | **통과** (DoD 1~5 + INV-6 실측 — 골든 3사·재업로드 0·웜 벤치·봉투 평문 부재·배치 재개) | 2026-07-22 |
-| M4 추론 | **통과** (분류 97.4%·이체 거짓양성 0/INV-8·정기결제·Lua 샌드박스 — plunit 19+sandbox 그린) | 2026-07-22 |
-| M4 추론 | 대기 | — |
-| M5 정산 | 대기 | — |
+| M4 추론 | **통과** (분류 97.4%·이체 거짓양성 0/INV-8·정기결제·Lua 샌드박스 — plunit 19+sandbox 그린 + CI 런 29867115754 prolog 잡 그린) | 2026-07-22 |
+| M5 정산 | **통과** (INV-7 차이 0원: 10,000 entry·상각 481행·0.5 경계 400건 삼자 일치, 로컬 3.2.0 + CI 3.1.2 이종 재현 — CI 런 29895860120 settlement·worker 그린. DSL 스펙 유효 20/오류 29/위치 exact. 적대 검증 15건 수정) | 2026-07-22 |
 | M6 분석 | 대기 | — |
 | M7 실시간 | 대기 | — |
 | M8 UI·접근성 | 대기 | — |
