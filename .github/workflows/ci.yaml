@@ -60,6 +60,8 @@ jobs:
             worker:
               - *contracts
               - 'services/worker/**'
+              # records_test.go 가 정산 골든을 직접 읽는다 — 골든 변경도 재검증
+              - 'fixtures/settlement/**'
             prolog:
               - *contracts
               - 'services/prolog/**'
@@ -76,6 +78,10 @@ jobs:
             settlement:
               - *contracts
               - 'modules/settlement/**'
+              # INV-7 게이트의 정본·골든이 여기 있다 — 이들 변경이 잡을
+              # 트리거하지 않으면 반올림 규칙 변조가 무신호로 통과한다
+              - 'scripts/parity/**'
+              - 'fixtures/settlement/**'
             analytics:
               - *contracts
               - 'modules/analytics/**'
@@ -263,6 +269,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '24' }
+      # make test-settlement 이 go test ./settlement/... 을 포함한다 —
+      # 러너 프리인스톨 Go 에 의존하지 않도록 worker 잡과 동일 버전 핀
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.26.5', cache-dependency-path: services/worker/go.sum }
       - run: sudo apt-get update && sudo apt-get install -y gnucobol
       - run: make build-settlement
       - run: make test-settlement
