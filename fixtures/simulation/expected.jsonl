@@ -1,0 +1,7 @@
+{"ok":true,"kind":"warmup"}
+{"ok":true,"kind":"montecarlo","depletion_probability":"0.0000","ci95_halfwidth":"0.000000","final_balance_quantiles":{"p05":"4850419","p25":"5405798","p50":"5782808","p75":"6165288","p95":"6713771"},"iterations":10000,"horizon_months":24}
+{"ok":true,"kind":"montecarlo","depletion_probability":"0.7075","ci95_halfwidth":"0.008916","final_balance_quantiles":{"p05":"-741704","p25":"-351613","p50":"-81153","p75":"185942","p95":"557740"},"iterations":10000,"horizon_months":12}
+{"ok":true,"kind":"repayment","order":["card-a","loan-b"],"months":15,"total_interest_minor":"445395","total_paid_minor":"8445395"}
+{"ok":true,"kind":"repayment","order":["tie-a","tie-b"],"months":7,"total_interest_minor":"80213","total_paid_minor":"2080213"}
+{"ok":false,"error":"seed 누락"}
+{"ok":false,"error":"budget 이 최소상환 합보다 작음"}
