@@ -5,6 +5,15 @@
 
 REPORT_FONT <- "DejaVu Sans"
 
+#' 축 라벨용 정수 문자열 포맷 (천단위 구분). 2^53 까지 정확 — 32비트 절단 없음.
+money_axis_labels <- function(v) {
+  s <- sprintf("%.0f", v)
+  neg <- substring(s, 1, 1) == "-"
+  mag <- ifelse(neg, substring(s, 2), s)
+  mag <- gsub("(?<=\\d)(?=(\\d{3})+$)", ",", mag, perl = TRUE)
+  ifelse(neg, paste0("-", mag), mag)
+}
+
 #' ggplot 테마 — 디자인 토큰 1벌로부터
 tokened_theme <- function(tok) {
   ggplot2::theme_minimal(base_size = 15, base_family = REPORT_FONT) +
@@ -46,9 +55,11 @@ render_report <- function(name, dates, amounts, anomaly_idx, tokens, out_dir) {
     }
     p <- p +
       ggplot2::scale_y_continuous(
-        # 축 라벨은 정수 문자열 포맷 (천단위 구분) — double 값은 최소단위
-        # 정수 범위(< 2^53 검증됨)라 formatC(format="d") 가 정확하다
-        labels = function(v) formatC(v, format = "d", big.mark = ",")
+        # 축 라벨은 문자열 연산으로 만든다(전역 규칙). formatC(format="d") 는
+        # 내부에서 32비트 정수로 강제 변환해 |v| > 2^31-1 이면 전부 NA 를 찍는데,
+        # 성공 응답·종료코드 0 과 함께 나가 침묵 실패가 된다(적대 검증 blocker).
+        # sprintf("%.0f") + 정규식 천단위 삽입은 2^53 까지 정확하다.
+        labels = money_axis_labels
       ) +
       ggplot2::labs(title = name, x = NULL, y = NULL) +
       tokened_theme(tok)
