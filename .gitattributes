@@ -46,3 +46,7 @@ fixtures/**/*.dat                 binary
 modules/settlement/bin/**         binary
 # CP949 명세서 픽스처 — EOL/인코딩 정규화가 바이트를 깨뜨리면 안 된다
 fixtures/ingest/*.csv             -text
+# M6 결정론 골든 — 바이트 단위 회귀 기준이므로 어떤 정규화도 금지
+fixtures/analytics/svg/*.svg      -text
+fixtures/analytics/*.jsonl        -text
+fixtures/simulation/*.jsonl       -text

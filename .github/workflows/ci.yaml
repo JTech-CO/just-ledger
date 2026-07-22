@@ -85,9 +85,13 @@ jobs:
             analytics:
               - *contracts
               - 'modules/analytics/**'
+              # 골든·토큰 SSOT 변경도 잡을 트리거 (M5 INV-7 우회 교훈)
+              - 'fixtures/analytics/**'
+              - 'apps/web/client/styles/tokens.css'
             simulation:
               - *contracts
               - 'modules/simulation/**'
+              - 'fixtures/simulation/**'
             db:
               - *contracts
               - 'db/**'
@@ -283,11 +287,23 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.analytics == 'true' && needs.changes.outputs.analytics_src == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/.r-libs
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
         with: { r-version: '4.3.3' }   # 컨테이너(noble apt r-base) 확정 버전과 동일 — M6 골든 바이트 동일성 전제
-      - run: Rscript -e 'install.packages(c("ggplot2","jsonlite","svglite"), repos="https://cloud.r-project.org")'
+      # 폰트·렌더링 의존 — SVG 텍스트 메트릭 결정론의 전제 (DejaVu 고정)
+      - run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core libfontconfig1-dev libfreetype6-dev libpng-dev
+      - uses: actions/cache@v4
+        with:
+          path: .r-libs
+          key: r-libs-${{ hashFiles('modules/analytics/DEPENDS.lock') }}
+      # P3M 날짜 스냅샷 — 컨테이너 실설치본(DEPENDS.lock)과 동일 버전 복원.
+      # tests/run.R 의 version-lock 단언이 드리프트를 즉시 잡는다 (미결질문 #4 결정)
+      - run: |
+          mkdir -p .r-libs
+          Rscript -e 'install.packages(c("ggplot2","jsonlite","svglite"), repos="https://packagemanager.posit.co/cran/__linux__/noble/2026-07-20")'
       - run: make test-analytics
 
   # ── Julia (시뮬레이션) ───────────────────────────────────────────────────
@@ -298,7 +314,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
-        with: { version: '1.11' }
+        with: { version: '1.11.5' }   # 컨테이너 확정 버전 — RNG 스트림 동일성(결정론 골든) 전제
+      - uses: julia-actions/cache@v2
+      - run: julia --project=modules/simulation -e 'using Pkg; Pkg.instantiate()'
       - run: make test-simulation
 
   # ── PLpgSQL (스키마·불변식) ──────────────────────────────────────────────
