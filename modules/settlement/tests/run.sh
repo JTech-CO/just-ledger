@@ -25,6 +25,26 @@ check settle-boundary bin/settle "$FIX/settle-boundary.in.dat" "$FIX/settle-boun
 check settle-bulk     bin/settle "$FIX/settle-bulk.in.dat"     "$FIX/settle-bulk.expected.dat"
 check amort           bin/amort  "$FIX/amort.in.dat"           "$FIX/amort.expected.dat"
 
+# 음성 케이스: 계약 위반 입력은 조용한 절삭 없이 비정상 종료해야 한다
+expect_abort() { # name, bin, input-file
+  local name="$1" bin="$2" in="$3"
+  if "$bin" < "$in" > /dev/null 2>/dev/null; then
+    echo "FAIL  $name — 비정상 입력인데 exit 0"
+    FAIL=1
+  else
+    echo "PASS  $name (명시적 거절)"
+  fi
+}
+
+TMPD=$(mktemp -d)
+# direction 'X' — 부호 추정 금지 (settle-io.cpy 계약 1)
+printf '%-32sXKRW%015d%015d%015d\n' "BAD.0001" 5 1 1 > "$TMPD/bad-dir.dat"
+expect_abort settle-bad-direction bin/settle "$TMPD/bad-dir.dat"
+# 고유 계정 5001개 — ACC-TABLE 상한 (settle-io.cpy 계약 2)
+awk 'BEGIN{for(i=1;i<=5001;i++)printf "ACC.%-28dDKRW%015d%015d%015d\n",i,1,1,1}' > "$TMPD/too-many.dat"
+expect_abort settle-account-cap bin/settle "$TMPD/too-many.dat"
+rm -rf "$TMPD"
+
 # 성능 게이트: 마감 10,000 entry 2초 이내 (모듈 CLAUDE.md)
 START=$(date +%s%N)
 bin/settle < "$FIX/settle-bulk.in.dat" > /dev/null

@@ -69,11 +69,23 @@
            STOP RUN.
       *
        ACCUMULATE-ONE.
+      *    contract: only D/C are valid; never guess a sign silently
+      *    (a guessed sign diverging from the JS reference = INV-7)
+           IF SI-DIRECTION NOT = "D" AND SI-DIRECTION NOT = "C"
+               DISPLAY "SETTLE: invalid direction " SI-DIRECTION
+                   UPON SYSERR
+               STOP RUN WITH ERROR STATUS 8
+           END-IF.
       *    KRW conversion: amount * num / den, banker's rounding.
       *    amount and num are non-negative; sign is DIRECTION.
            COMPUTE WS-PROD = SI-AMOUNT * SI-RATE-NUM.
            COMPUTE WS-KRW ROUNDED MODE IS NEAREST-EVEN =
-               WS-PROD / SI-RATE-DEN.
+               WS-PROD / SI-RATE-DEN
+               ON SIZE ERROR
+                   DISPLAY "SETTLE: KRW value overflows S9(18)"
+                       UPON SYSERR
+                   STOP RUN WITH ERROR STATUS 8
+           END-COMPUTE.
            IF SI-DIRECTION = "C"
                COMPUTE WS-SIGNED = 0 - WS-KRW
            ELSE
@@ -85,10 +97,22 @@
                    UNTIL WS-IDX > ACC-COUNT OR WS-FOUND = 1
                IF ACC-CODE(WS-IDX) = SI-ACCOUNT-CODE
                    ADD WS-SIGNED TO ACC-BAL(WS-IDX)
+                       ON SIZE ERROR
+                           DISPLAY "SETTLE: balance overflows S9(18)"
+                               UPON SYSERR
+                           STOP RUN WITH ERROR STATUS 8
+                   END-ADD
                    MOVE 1 TO WS-FOUND
                END-IF
            END-PERFORM.
            IF WS-FOUND = 0
+      *        contract: at most 5000 distinct accounts (table bound);
+      *        appending past it would corrupt memory, so stop loudly
+               IF ACC-COUNT >= 5000
+                   DISPLAY "SETTLE: more than 5000 accounts"
+                       UPON SYSERR
+                   STOP RUN WITH ERROR STATUS 8
+               END-IF
                ADD 1 TO ACC-COUNT
                MOVE SI-ACCOUNT-CODE TO ACC-CODE(ACC-COUNT)
                MOVE WS-SIGNED       TO ACC-BAL(ACC-COUNT)

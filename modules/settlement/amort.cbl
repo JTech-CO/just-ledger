@@ -72,14 +72,33 @@
                COMPUTE WS-PROD = WS-BAL * AI-RATE-NUM
                COMPUTE WS-INT ROUNDED MODE IS NEAREST-EVEN =
                    WS-PROD / AI-RATE-DEN
+                   ON SIZE ERROR
+                       DISPLAY "AMORT: interest overflows S9(18)"
+                           UPON SYSERR
+                       STOP RUN WITH ERROR STATUS 8
+               END-COMPUTE
                IF WS-K = WS-N
       *            last period: absorb remaining principal
                    MOVE WS-BAL TO WS-PRIN
-                   COMPUTE WS-PAY-OUT = WS-PRIN + WS-INT
                ELSE
+      *            principal = clamp(A - interest, 0, balance) —
+      *            copybook semantics: never negative, never over-pay;
+      *            keeps every output field unsigned and both sides
+      *            (JS reference / COBOL) byte-identical for any A
                    COMPUTE WS-PRIN = WS-PAY - WS-INT
-                   MOVE WS-PAY TO WS-PAY-OUT
+                   IF WS-PRIN < 0
+                       MOVE 0 TO WS-PRIN
+                   END-IF
+                   IF WS-PRIN > WS-BAL
+                       MOVE WS-BAL TO WS-PRIN
+                   END-IF
                END-IF
+               COMPUTE WS-PAY-OUT = WS-PRIN + WS-INT
+                   ON SIZE ERROR
+                       DISPLAY "AMORT: payment overflows S9(18)"
+                           UPON SYSERR
+                       STOP RUN WITH ERROR STATUS 8
+               END-COMPUTE
                SUBTRACT WS-PRIN FROM WS-BAL
                MOVE AI-LOAN-ID TO AO-LOAN-ID
                MOVE WS-K       TO AO-PERIOD
