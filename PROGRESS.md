@@ -6,9 +6,16 @@
 
 ## 현재 phase
 
-**M6 — 분석 (R)** (착수 전)
+**M7 — 실시간 계층 (Elixir)** (착수 전)
 
-M0~M5 게이트 통과. **M5(2026-07-22):** 정산 계층 완성 —
+M0~M6 게이트 통과. **M6(2026-07-23):** 분석 계층 완성 —
+- **R `modules/analytics`**: STL(robust) + MAD robust z > 3.5 이상치, 부트스트랩 10,000회 예산 초과확률, 디자인 토큰(tokens.css SSOT) 파싱 → ggplot 테마 → **라이트/다크 SVG 2벌**. `--cache-dir` 캐시(키 = stdin + 토큰 + 모듈 코드).
+- **Julia `modules/simulation`**: 가우시안 KDE 리샘플링 몬테카를로(Xoshiro 명시 시드), 상환 순서 **Int128 전수 순열 최적화**(가지치기 + 사전순 타이브레이크), warmup(JIT 예열), SHA-256 캐시.
+- **DoD 실측**: ① 재실행·CI 양쪽 stdout·SVG 바이트 동일 ② 재현율 1.000 / FPR 0.0000~0.0049 (골든 구성 + 주입 밀도 4종 + 주입0 + 상수계열) ③ 10,000 경로 NaN·발산 0, CI 폭 0.008916 ≤ 0.01 ④ SVG 2벌 + **실제 사용 색 기반** AA ⑤ 캐시 히트·무효화.
+- **적대 검증 4렌즈 52건 → 확증 22건(중복 제거 12건) 전부 수정.** blocker 5: STL 스미어링으로 DoD 2 실패(게이트는 유리한 구성만 측정), CSS 주석 파싱으로 토큰 SSOT 무력화, `formatC` 32비트 절단 침묵 실패, 캐시 키가 토큰 미포함 + 환경성 실패 영구 캐시, AA 검사가 실제 SVG 색 미검증.
+- 테스트: analytics 58검사 / simulation 50건.
+
+**M5(2026-07-22):** 정산 계층 완성 —
 - **COBOL**: `settle.cbl`(다통화 KRW 환산·계정 집계, NEAREST-EVEN) + `amort.cbl`(원리금 균등 상각, 마지막 회차 잔여 흡수 → 잔액 정확히 0). copybook 2종이 SSOT.
 - **JS 참조 정본** `scripts/parity/lib.mjs`(전 과정 BigInt) + INV-7 대조 하네스: 10,000 entry 마감 + 상각 481행 + **0.5 경계 전수 400건** — 폐형식·JS·COBOL 삼자 일치, **차이 0원**. 컨테이너(GnuCOBOL 3.2.0)와 CI(3.1.2) 이종 버전에서 골든 바이트 동일 실측.
 - **Go 사전 게이트**: PIC 폭·수치 범위(S9(18) 보수적 상계)·고유 계정 5000·회차 1..360 — COBOL 실행 전 거절 (DoD 4).
@@ -70,8 +77,11 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 
 ## 다음 할 일
 
-1. **M6 착수** (R 단일 언어 세션): `modules/analytics` — 월별 집계 통계·이상치 탐지·SVG 리포트. **착수 전 미결질문 #4(R 패키지 CRAN apt vs renv) 결정 필요**
-2. M6 병행 참고: worker 의 정산 오케스트레이션(월말 마감 스케줄 → BuildSettleInput → COBOL → 결과 DB 반영)은 M7 실시간 연동 때 접속 — 현재는 stdin/stdout 단독 실행 계약까지 완료
+1. **M7 착수** (Elixir 단일 언어 세션): `services/realtime` — Phoenix 채널 + PostgreSQL `LISTEN` 브리지 + 예산 임계 감시 GenServer + 감독 트리. 진입조건(M1·M2)은 이미 충족.
+2. 미접속 배선(모듈은 완성, 오케스트레이션은 후속 phase):
+   - 정산: worker 월말 마감 스케줄 → `BuildSettleInput` → COBOL → 결과 DB 반영
+   - 분석: 야간 스케줄 → R/Julia 배치 → `report_artifact` 등록·캐시 서빙
+   - DSL: eval 요청에 `txn.currency` 전달 (M5 계약 변경 — 소비자 미갱신)
 3. 백서 §2.1/§3.1 버전 표기 개정(docs: 커밋) 미결 유지
 
 ---
@@ -89,7 +99,7 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | 1 | ~~Erlang/Elixir 설치 방식~~ | **해소(2026-07-21)**: `hexpm/elixir` 멀티스테이지 COPY 성공 — 실존 태그 `1.18.3-erlang-27.3.3-ubuntu-noble-20260509.1` 로 고정, `mix local.hex/rebar` 정상 |
 | 2 | ~~GnuCOBOL 소스 빌드 vs 배포판 (`COMP-3` 재현성)~~ | **해소(2026-07-22, M5)**: 입출력을 DISPLAY 텍스트 고정폭으로 설계해 COMP-3(PACKED-DECIMAL) 바이트를 와이어에 노출하지 않음 — 재현성 문제가 구조적으로 소멸. 실증: 컨테이너 3.2.0 과 CI 배포판 3.1.2 가 동일 골든 바이트 산출 (settlement 잡 그린) |
 | 3 | 은행 CSV 골든 픽스처 3종 포맷 | M3 착수 전 결정 |
-| 4 | R 패키지 CRAN apt vs `renv` | M6 착수 전 결정 (R 4.3.3 확정을 전제로) |
+| 4 | ~~R 패키지 CRAN apt vs `renv`~~ | **해소(2026-07-23, M6)**: renv 미도입. 컨테이너 실설치본을 `modules/analytics/DEPENDS.lock`(경량 잠금)에 고정하고, CI 는 그 `snapshot` 날짜의 P3M 바이너리로 동일 버전을 복원한다. `tests/run.R` 의 version-lock 단언이 드리프트를 골든 비교 전에 잡는다. 실증: 로컬 컨테이너와 CI 러너가 SVG 골든 바이트 동일 |
 | 5 | 프로덕션 배포 대상 | M9 전까지 |
 | 6 | ~~GitHub 원격 연결~~ | **해소(2026-07-21)**: `JTech-CO/just-ledger` push 완료, CI 실측 완료 |
 | 7 | ~~워커의 RLS 컨텍스트~~ | **해소(2026-07-21, M2)**: (a)안 확정 — 어댑터 계약(worker/prolog 시그니처)의 전 호출이 `ownerId` 를 명시로 받고, 워커는 작업 단위로 `set_config('app.user_id', ownerId)` 수행 |
@@ -134,6 +144,8 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | 2026-07-22 | `modules/settlement/copybook/{settle-io,amort-io}.cpy` (신설) | 정산·상각 고정폭 레코드 SSOT — SETTLE-IN 81 / SETTLE-OUT 51 / AMORT-IN 67 / AMORT-OUT 79. 상각 A 는 JS 참조가 계산해 입력(AI-PAYMENT) | settlement ✔, worker(records.go 미러) ✔, parity(records.mjs 미러·gen.mjs) ✔ | 전부 ✔ |
 | 2026-07-22 | `settle-io.cpy`, `amort-io.cpy` (개정 — 적대검증) | 계약 한계 명문화: direction D\|C 강제, 고유 계정 ≤5000, S9(18) 범위 정책(생성기 사전 거절 + COBOL ON SIZE ERROR), AI-PERIODS 1..360, **상각 클램프 의미론**(원금 = clamp(A−이자, 0, 잔액) — 음수 상각 미표현) | settlement ✔, worker ✔, parity(lib/records.mjs) ✔ — 골든 재생성(LN0005 조기완제·LN0006 360회차 추가) | 전부 ✔ |
 | 2026-07-22 | rules-dsl JSONL 프로토콜 (개정 — 적대검증) | eval `txn.currency` **필수화**(리터럴 통화 ≠ txn 통화면 rule 불발 — 환산·근사 없음), 응답에 `skipped_budgets` 추가, `parseMoney` 를 contracts moneyMinor 패턴과 동일 수용 집합으로 | dsl ✔, worker/web(M7+ 소비 시 currency 전달 필요 — 어댑터 계약에 반영 예정) | dsl ✔ / 소비자 대기 |
+| 2026-07-23 | `apps/web/client/styles/tokens.css` (소비자 추가 — 파일 불변) | R 리포트가 SVG 색상을 이 파일에서 **파싱해 쓴다**(하드코딩 hex 0). 토큰 값이 바뀌면 analytics 골든 SVG 가 갈라지므로 CI analytics 잡 필터에 tokens.css 를 포함했고, 캐시 키에도 토큰 해시가 들어간다 | web(변경 불요 — 소유·형태 불변), analytics ✔(파서·AA 테스트) | analytics ✔ |
+| 2026-07-23 | analytics JSONL 프로토콜 (신설), simulation JSONL 프로토콜 (신설) | analytics: `anomaly`/`forecast`/`report` 요청, 확률은 고정 자릿수 **문자열**, 금액은 최소단위 정수 문자열(2^53 초과 거절). simulation: `montecarlo`/`repayment`/`warmup`, 확률·CI 고정 자릿수 문자열, 금액 문자열(통계 경로 2^53 가드 / repayment 는 Int128 로 18자리 수용). 두 모듈 모두 `--cache-dir` 캐시 규약 | analytics ✔, simulation ✔, worker(야간 스케줄 오케스트레이션 미접속) | 모듈 ✔ / worker 대기 |
 
 ---
 
@@ -188,7 +200,7 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | M3 인제스트 | **통과** (DoD 1~5 + INV-6 실측 — 골든 3사·재업로드 0·웜 벤치·봉투 평문 부재·배치 재개) | 2026-07-22 |
 | M4 추론 | **통과** (분류 97.4%·이체 거짓양성 0/INV-8·정기결제·Lua 샌드박스 — plunit 19+sandbox 그린 + CI 런 29867115754 prolog 잡 그린) | 2026-07-22 |
 | M5 정산 | **통과** (INV-7 차이 0원: 10,000 entry·상각 481행·0.5 경계 400건 삼자 일치, 로컬 3.2.0 + CI 3.1.2 이종 재현 — CI 런 29895860120 settlement·worker 그린. DSL 스펙 유효 20/오류 29/위치 exact. 적대 검증 15건 수정) | 2026-07-22 |
-| M6 분석 | 대기 | — |
+| M6 분석 | **통과** (DoD 1~5 실측: 바이트 결정론·재현율 1.000/FPR ≤0.0049·NaN 0/CI 0.0089·SVG 2벌 AA·캐시. analytics 58 + simulation 50 그린, CI analytics/simulation 잡 그린. 적대 검증 22건 수정) | 2026-07-23 |
 | M7 실시간 | 대기 | — |
 | M8 UI·접근성 | 대기 | — |
 | M9 언어 구성·배포 | 대기 | — |
