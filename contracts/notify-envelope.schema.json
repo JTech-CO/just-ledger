@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://just-ledger.dev/contracts/notify-envelope.schema.json",
+  "title": "notify_envelope",
+  "description": "PostgreSQL NOTIFY('ledger_events') 페이로드 — DB → Elixir 구간 전용 봉투. 단일 채널에 모든 소유자의 이벤트가 흐르므로, Elixir 는 owner_id 로 채널 토픽(user:<owner_id>)을 결정해 해당 소유자에게만 전달한다. 실시간 경로에는 DB 의 RLS 가 적용되지 않으므로 이 필드가 격리의 유일한 근거다. 브라우저로 나가는 프레임은 event 부분만이며(자기 것만 받으므로 owner_id 를 되돌려 보내지 않는다) 그 계약은 notify-event.schema.json 이 그대로 유지한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["owner_id", "event"],
+  "properties": {
+    "owner_id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "event": { "$ref": "notify-event.schema.json" }
+  }
+}
