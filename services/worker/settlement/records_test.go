@@ -3,6 +3,7 @@ package settlement
 import (
 	"bufio"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -154,6 +155,69 @@ func TestAmortOverflowRejected(t *testing.T) {
 	for _, c := range cases {
 		if _, err := FormatAmortIn(c.mutate(valid)); err == nil {
 			t.Errorf("%s: 거절되어야 하는데 통과함", c.name)
+		}
+	}
+}
+
+// 환산값 S9(18) 초과는 COBOL 실행 전에 거절 — 조용한 절삭 경로 차단 (INV-7)
+func TestKrwRangeRejectedBeforeCobol(t *testing.T) {
+	// 999999999999999 × 999999999999999 / 1 ≈ 1e30 — 계약 폭 이내지만 범위 초과
+	over := SettleEntry{"ACC.0001", "D", "KRW",
+		strings.Repeat("9", 15), strings.Repeat("9", 15), "1"}
+	if _, err := FormatSettleIn(over); err == nil {
+		t.Fatal("S9(18) 초과 환산이 통과함 — COBOL 이 조용히 절삭했을 값")
+	}
+	// 상한 바로 안쪽은 통과해야 함: 9e17 × 1 / 1
+	within := SettleEntry{"ACC.0001", "D", "KRW", "900000000000000", "1000", "1"}
+	if _, err := FormatSettleIn(within); err != nil {
+		t.Fatalf("범위 내 환산이 거절됨: %v", err)
+	}
+}
+
+// 고유 계정 수 > 5000 이면 실행 전 거절 (settle.cbl ACC-TABLE 상한)
+func TestAccountCapRejectedBeforeCobol(t *testing.T) {
+	mk := func(n int) []SettleEntry {
+		es := make([]SettleEntry, n)
+		for i := range es {
+			es[i] = SettleEntry{
+				AccountCode: "ACC." + strings.Repeat("0", 5-len(strconv.Itoa(i))) + strconv.Itoa(i),
+				Direction:   "D", Currency: "KRW",
+				AmountMinor: "1", RateNum: "1", RateDen: "1",
+			}
+		}
+		return es
+	}
+	if _, err := BuildSettleInput(mk(MaxSettleAccounts)); err != nil {
+		t.Fatalf("5000계정 배치가 거절됨: %v", err)
+	}
+	if _, err := BuildSettleInput(mk(MaxSettleAccounts + 1)); err == nil {
+		t.Fatal("5001계정 배치가 통과함 — COBOL 테이블 상한 초과")
+	}
+}
+
+// 상각 회차 계약 상한 1..360 강제
+func TestAmortPeriodsCapRejected(t *testing.T) {
+	valid := AmortLoan{"LN0001", "1000000", "5", "1000", "360", "86066"}
+	if _, err := FormatAmortIn(valid); err != nil {
+		t.Fatalf("periods=360 이 거절됨: %v", err)
+	}
+	for _, p := range []string{"361", "999"} {
+		bad := valid
+		bad.Periods = p
+		if _, err := FormatAmortIn(bad); err == nil {
+			t.Errorf("periods=%s 가 통과함 (상한 360)", p)
+		}
+	}
+}
+
+// 통화는 [A-Z]{3} 정확히 — 소문자·2자·공백 포함 거절 (JS 미러와 대칭)
+func TestCurrencyFormatRejected(t *testing.T) {
+	valid := SettleEntry{"ACC.0001", "D", "KRW", "1000", "1", "1"}
+	for _, cur := range []string{"kr1", "KR", "K W", "krw"} {
+		bad := valid
+		bad.Currency = cur
+		if _, err := FormatSettleIn(bad); err == nil {
+			t.Errorf("currency=%q 가 통과함", cur)
 		}
 	}
 }
