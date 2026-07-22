@@ -112,8 +112,8 @@ test-analytics: ## M6 — R 결정론 + 이상치 탐지
 test-simulation: ## M6 — Julia 결정론 + 발산 없음
 	julia --project=modules/simulation modules/simulation/test/runtests.jl
 
-test-realtime: ## M7 — 채널 지연·유실·복구
-	cd services/realtime && mix test
+test-realtime: ## M7 — 채널 지연·유실·복구 (DATABASE_URL 있으면 통합까지)
+	bash services/realtime/test-with-db.sh
 
 test-ui: ## M8 — 컴포넌트 + 가상 스크롤
 	cd apps/web && pnpm test:ui

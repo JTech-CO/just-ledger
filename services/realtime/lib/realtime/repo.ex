@@ -28,13 +28,17 @@ defmodule Realtime.Repo do
 
   defp parse_url(url) do
     uri = URI.parse(url)
+
     {user, pass} =
       case uri.userinfo do
-        nil -> {nil, nil}
-        info -> case String.split(info, ":", parts: 2) do
-                  [u, p] -> {u, p}
-                  [u] -> {u, nil}
-                end
+        nil ->
+          {nil, nil}
+
+        info ->
+          case String.split(info, ":", parts: 2) do
+            [u, p] -> {u, p}
+            [u] -> {u, nil}
+          end
       end
 
     [

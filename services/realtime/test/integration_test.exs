@@ -83,7 +83,12 @@ defmodule Realtime.IntegrationTest do
       [txn, b, amount, a]
     )
 
-    Postgrex.query!(conn, "UPDATE txn SET status='posted', posted_at=now() WHERE id=$1::text::uuid", [txn])
+    Postgrex.query!(
+      conn,
+      "UPDATE txn SET status='posted', posted_at=now() WHERE id=$1::text::uuid",
+      [txn]
+    )
+
     txn
   end
 
@@ -94,9 +99,15 @@ defmodule Realtime.IntegrationTest do
 
   defp do_wait(fun, deadline) do
     cond do
-      fun.() -> :ok
-      System.monotonic_time(:millisecond) > deadline -> flunk("조건 대기 시간 초과")
-      true -> Process.sleep(20); do_wait(fun, deadline)
+      fun.() ->
+        :ok
+
+      System.monotonic_time(:millisecond) > deadline ->
+        flunk("조건 대기 시간 초과")
+
+      true ->
+        Process.sleep(20)
+        do_wait(fun, deadline)
     end
   end
 
@@ -196,7 +207,11 @@ defmodule Realtime.IntegrationTest do
     pool = Application.get_env(:realtime, :pool_size, 5)
 
     {:ok, res} =
-      Postgrex.query(conn, "SELECT count(*)::int FROM pg_stat_activity WHERE datname = current_database()", [])
+      Postgrex.query(
+        conn,
+        "SELECT count(*)::int FROM pg_stat_activity WHERE datname = current_database()",
+        []
+      )
 
     [[active]] = res.rows
     IO.puts("  [DoD 5] 활성 커넥션 #{active} (풀 설정 #{pool} + LISTEN 1)")

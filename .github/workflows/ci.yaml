@@ -69,6 +69,9 @@ jobs:
             realtime:
               - *contracts
               - 'services/realtime/**'
+              # 통합 테스트가 스키마·NOTIFY 발행부를 그대로 쓴다 (봉투 계약)
+              - 'db/migrations/**'
+              - 'db/triggers/**'
             wasm:
               - *contracts
               - 'modules/statement-wasm/**'
@@ -218,14 +221,36 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.realtime == 'true' && needs.changes.outputs.realtime_src == 'true' }}
     runs-on: ubuntu-latest
+    # 통합 테스트(전파 지연·동시 연결·복구)는 실제 NOTIFY 경로가 필요하다
+    services:
+      postgres:
+        image: postgres:18
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: ledger }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/ledger
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with: { otp-version: '27.3.3', elixir-version: '1.18.3' }   # 컨테이너 확정 버전과 동일
+      - name: postgresql-client-18 (pgdg)
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
+      - uses: actions/cache@v4
+        with:
+          path: |
+            services/realtime/deps
+            services/realtime/_build
+          key: mix-${{ hashFiles('services/realtime/mix.lock') }}
       - run: cd services/realtime && mix deps.get
       - run: cd services/realtime && mix format --check-formatted
-      - run: cd services/realtime && mix compile --warnings-as-errors
-      - run: cd services/realtime && mix test
+      - run: cd services/realtime && MIX_ENV=test mix compile --warnings-as-errors
+      - run: make test-realtime
 
   # ── Rust WASM (인제스트 파서) ────────────────────────────────────────────
   wasm:

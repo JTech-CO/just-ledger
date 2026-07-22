@@ -32,12 +32,16 @@ defmodule Realtime.ListenerTest do
     end
 
     test "owner_id 가 UUID 형식이 아니면 거절한다" do
-      assert {:error, :bad_owner_id} = Listener.parse_envelope(envelope("not-a-uuid", balance_event()))
+      assert {:error, :bad_owner_id} =
+               Listener.parse_envelope(envelope("not-a-uuid", balance_event()))
+
       assert {:error, :bad_owner_id} = Listener.parse_envelope(envelope("", balance_event()))
     end
 
     test "event 가 없거나 type 이 없으면 거절한다" do
-      assert {:error, :bad_envelope} = Listener.parse_envelope(Jason.encode!(%{"owner_id" => @owner1}))
+      assert {:error, :bad_envelope} =
+               Listener.parse_envelope(Jason.encode!(%{"owner_id" => @owner1}))
+
       assert {:error, :bad_envelope} =
                Listener.parse_envelope(Jason.encode!(%{"owner_id" => @owner1, "event" => %{}}))
     end
@@ -67,6 +71,7 @@ defmodule Realtime.ListenerTest do
       Listener.dispatch(envelope(@owner1, balance_event("acc-1", "1000")), pubsub)
 
       assert_receive {:ledger_event, %{"row" => %{"balance_minor" => "1000"}}}
+
       # owner2 토픽으로도 왔다면 같은 프로세스가 두 번 받는다 — 한 번만 와야 한다
       refute_receive {:ledger_event, _}, 50
     end
@@ -78,6 +83,7 @@ defmodule Realtime.ListenerTest do
         Task.async(fn ->
           Phoenix.PubSub.subscribe(pubsub, Listener.topic(@owner2))
           send(parent, :subscribed)
+
           receive do
             {:ledger_event, e} -> {:got, e}
           after
@@ -104,7 +110,10 @@ defmodule Realtime.ListenerTest do
       for event <- [
             balance_event(),
             %{"type" => "ingest_progress", "batch_id" => @owner2, "state" => "done"},
-            %{"type" => "settlement_done", "period" => %{"start" => "2026-05-01", "end" => "2026-05-31"}}
+            %{
+              "type" => "settlement_done",
+              "period" => %{"start" => "2026-05-01", "end" => "2026-05-31"}
+            }
           ] do
         Listener.dispatch(envelope(@owner1, event), pubsub)
       end

@@ -19,12 +19,14 @@ defmodule RealtimeWeb.LedgerChannelTest do
 
   test "자기 토픽에는 가입할 수 있다" do
     assert {:ok, _, _socket} =
-             socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner1}")
+             socket_for(@owner1)
+             |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner1}")
   end
 
   test "남의 토픽 가입은 거절된다" do
     assert {:error, %{reason: "forbidden"}} =
-             socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner2}")
+             socket_for(@owner1)
+             |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner2}")
   end
 
   test "알 수 없는 토픽은 거절된다" do
@@ -37,7 +39,7 @@ defmodule RealtimeWeb.LedgerChannelTest do
       socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner1}")
 
     # DB 미연결 환경에서는 빈 목록이지만, sync 프레임 자체는 반드시 온다
-    assert_push "sync", %{"balances" => balances}
+    assert_push("sync", %{"balances" => balances})
     assert is_list(balances)
   end
 
@@ -45,7 +47,7 @@ defmodule RealtimeWeb.LedgerChannelTest do
     {:ok, _, _socket} =
       socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner1}")
 
-    assert_push "sync", %{}
+    assert_push("sync", %{})
 
     event = %{
       "type" => "balance_changed",
@@ -53,27 +55,38 @@ defmodule RealtimeWeb.LedgerChannelTest do
     }
 
     # 내 토픽 — 받아야 한다
-    Phoenix.PubSub.broadcast(Realtime.PubSub, Realtime.Listener.topic(@owner1), {:ledger_event, event})
-    assert_push "balance_changed", %{"row" => %{"balance_minor" => "5000"}}
+    Phoenix.PubSub.broadcast(
+      Realtime.PubSub,
+      Realtime.Listener.topic(@owner1),
+      {:ledger_event, event}
+    )
+
+    assert_push("balance_changed", %{"row" => %{"balance_minor" => "5000"}})
 
     # 남의 토픽 — 오면 안 된다
-    Phoenix.PubSub.broadcast(Realtime.PubSub, Realtime.Listener.topic(@owner2), {:ledger_event, event})
-    refute_push "balance_changed", %{}, 100
+    Phoenix.PubSub.broadcast(
+      Realtime.PubSub,
+      Realtime.Listener.topic(@owner2),
+      {:ledger_event, event}
+    )
+
+    refute_push("balance_changed", %{}, 100)
   end
 
   test "푸시 프레임은 type 을 이벤트명으로 쓰고 본문에서 뺀다" do
     {:ok, _, _socket} =
       socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner1}")
 
-    assert_push "sync", %{}
+    assert_push("sync", %{})
 
     Phoenix.PubSub.broadcast(
       Realtime.PubSub,
       Realtime.Listener.topic(@owner1),
-      {:ledger_event, %{"type" => "settlement_done", "period" => %{"start" => "2026-05-01", "end" => "2026-05-31"}}}
+      {:ledger_event,
+       %{"type" => "settlement_done", "period" => %{"start" => "2026-05-01", "end" => "2026-05-31"}}}
     )
 
-    assert_push "settlement_done", payload
+    assert_push("settlement_done", payload)
     assert payload["period"]["start"] == "2026-05-01"
     refute Map.has_key?(payload, "type")
   end

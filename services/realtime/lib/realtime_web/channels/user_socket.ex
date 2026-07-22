@@ -13,7 +13,7 @@ defmodule RealtimeWeb.UserSocket do
   # 토큰 유효기간(초) — 재연결 시 갱신 토큰을 다시 받는다
   @max_age 86_400
 
-  channel "ledger:*", RealtimeWeb.LedgerChannel
+  channel("ledger:*", RealtimeWeb.LedgerChannel)
 
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do

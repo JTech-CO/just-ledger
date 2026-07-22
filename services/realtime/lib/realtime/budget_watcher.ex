@@ -71,6 +71,7 @@ defmodule Realtime.BudgetWatcher do
   def init(opts) do
     ratio = Keyword.get(opts, :ratio, Application.get_env(:realtime, :budget_alert_ratio, {8, 10}))
     pubsub = Keyword.get(opts, :pubsub, Realtime.PubSub)
+
     # 조회 함수를 주입 가능하게 둔다 — DB 없이 순수 로직을 테스트하기 위함
     lookup = Keyword.get(opts, :lookup, &__MODULE__.lookup_budgets/2)
     {:ok, %{ratio: ratio, pubsub: pubsub, lookup: lookup, fired: MapSet.new()}}
