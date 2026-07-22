@@ -183,35 +183,115 @@ action = choice
   , ASetAccount <$> (keyword "set" *> keyword "account" *> accountCode)
   ] <?> "동작 (tag|notify|set account)"
 
+-- 조건 문법은 '(' 시작에서만 중의적이다(괄호 조건 vs 괄호 식으로 시작하는
+-- 비교). 비교식 좌변 피연산자를 파싱한 뒤에는 커밋한다 — try 로 조건 시작
+-- 위치까지 되감지 않으므로 조건식 내부 오류가 실제 문제 토큰의 줄·열로
+-- 보고된다 (M5 DoD 5).
 cond :: P Cond
-cond = orExpr
-  where
-    orExpr = foldl1chain COr andExpr (keyword "or")
-    andExpr = foldl1chain CAnd notExpr (keyword "and")
-    notExpr = (CNot <$> (keyword "not" *> notExpr)) <|> atom
-    atom = choice
-      [ do p <- getPos
-           keyword "recurring"
-           pure (CRecurring p)
-      , do p <- getPos
-           keyword "merchant"
-           keyword "matches"
-           (alts, _) <- regexLit
-           pure (CMatches p alts)
-      , try comparison
-      , between (symbol "(") (symbol ")") cond
-      ] <?> "조건"
+cond = andExpr >>= orRest
 
-foldl1chain :: (a -> a -> a) -> P a -> P () -> P a
-foldl1chain f item sep = do
-  x <- item
-  xs <- many (sep *> item)
-  pure (foldl f x xs)
+orRest :: Cond -> P Cond
+orRest x = (do keyword "or"; y <- andExpr; orRest (COr x y)) <|> pure x
 
+andExpr :: P Cond
+andExpr = notExpr >>= andRest
+
+andRest :: Cond -> P Cond
+andRest x = (do keyword "and"; y <- notExpr; andRest (CAnd x y)) <|> pure x
+
+notExpr :: P Cond
+notExpr = (CNot <$> (keyword "not" *> notExpr)) <|> atom
+
+-- | 첫 원자가 이미 파싱된 뒤의 and/or 연속 (우선순위: and > or)
+condCont :: Cond -> P Cond
+condCont c = andRest c >>= orRest
+
+atom :: P Cond
+atom = choice
+  [ recurringAtom
+  , matchesAtom
+  , parenAtom
+  , comparison
+  ] <?> "조건"
+
+recurringAtom :: P Cond
+recurringAtom = do
+  p <- getPos
+  keyword "recurring"
+  pure (CRecurring p)
+
+matchesAtom :: P Cond
+matchesAtom = do
+  p <- getPos
+  keyword "merchant"
+  keyword "matches"
+  (alts, _) <- regexLit
+  pure (CMatches p alts)
+
+-- | 키워드로 시작이 확정되는 조건 원자 — 괄호 내부 판별용
+condKwAtom :: P Cond
+condKwAtom = choice
+  [ recurringAtom
+  , matchesAtom
+  , CNot <$> (keyword "not" *> notExpr)
+  ]
+
+-- | '(' 시작 원자: 괄호 조건이거나, 괄호 식을 좌변으로 하는 비교.
+-- '(' 소비 후에는 group 이 내부를 판별하며 백트래킹하지 않는다.
+parenAtom :: P Cond
+parenAtom = do
+  pOpen <- getPos
+  void (symbol "(")
+  g <- group
+  case g of
+    Left c -> pure c
+    Right e -> do
+      lhs <- termRest e >>= exprRest
+      finishCmp pOpen lhs
+
+-- | '(' 를 이미 소비한 상태에서 짝이 되는 ')' 까지 파싱.
+-- Left = 내부가 조건(괄호 전체가 조건 원자), Right = 내부가 식(비교 좌변 factor).
+group :: P (Either Cond Expr)
+group = choice
+  [ do c <- condKwAtom          -- recurring / merchant matches / not — 조건 확정
+       c2 <- condCont c
+       void (symbol ")")
+       pure (Left c2)
+  , do pInner <- getPos          -- 중첩 '(' — 재귀 판별
+       void (symbol "(")
+       g <- group
+       case g of
+         Left c -> do            -- '(' 조건 ')' 은 조건 원자 — and/or 연속 가능
+           c2 <- condCont c
+           void (symbol ")")
+           pure (Left c2)
+         Right e -> do           -- '(' 식 ')' 은 factor — 산술 연속 후 판별
+           e2 <- termRest e >>= exprRest
+           exprGroupEnd pInner e2
+  , do pE <- getPos              -- 숫자 / spent / limit / amount — 식 시작, 커밋
+       e <- expr
+       exprGroupEnd pE e
+  ]
+
+-- | 괄호 내부 식이 완성된 뒤: ')' 면 괄호 식, 비교 연산자면 괄호 조건
+exprGroupEnd :: Pos -> Expr -> P (Either Cond Expr)
+exprGroupEnd pStart e = choice
+  [ Right e <$ symbol ")"
+  , do c <- finishCmp pStart e
+       c2 <- condCont c
+       void (symbol ")")
+       pure (Left c2)
+  ]
+
+-- | 비교식 — 좌변 소비 즉시 커밋 (try 없음)
 comparison :: P Cond
 comparison = do
   p <- getPos
   lhs <- expr
+  finishCmp p lhs
+
+finishCmp :: Pos -> Expr -> P Cond
+finishCmp p lhs = do
   op <- choice
     [ OpGe <$ symbol ">=", OpLe <$ symbol "<="
     , OpGt <$ symbol ">", OpLt <$ symbol "<"
@@ -220,25 +300,23 @@ comparison = do
   CCmp p op lhs <$> expr
 
 expr :: P Expr
-expr = do
-  x <- term
-  rest x
-  where
-    rest x = choice
-      [ do p <- getPos; void (symbol "+"); y <- term; rest (EAdd p x y)
-      , do p <- getPos; void (symbol "-"); y <- term; rest (ESub p x y)
-      , pure x
-      ]
+expr = term >>= exprRest
+
+exprRest :: Expr -> P Expr
+exprRest x = choice
+  [ do p <- getPos; void (symbol "+"); y <- term; exprRest (EAdd p x y)
+  , do p <- getPos; void (symbol "-"); y <- term; exprRest (ESub p x y)
+  , pure x
+  ]
 
 term :: P Expr
-term = do
-  x <- factor
-  rest x
-  where
-    rest x = choice
-      [ do p <- getPos; void (symbol "*"); y <- factor; rest (EMul p x y)
-      , pure x
-      ]
+term = factor >>= termRest
+
+termRest :: Expr -> P Expr
+termRest x = choice
+  [ do p <- getPos; void (symbol "*"); y <- factor; termRest (EMul p x y)
+  , pure x
+  ]
 
 factor :: P Expr
 factor = choice

@@ -98,7 +98,8 @@ checkBudget env curs b =
         ]
 
 checkRule :: Env -> Set Text -> Rule -> [CheckErr]
-checkRule env curs r = actionOk ++ checkCond (Ctx InRule curs) (rCond r)
+checkRule env curs r =
+  actionOk ++ checkCond (Ctx InRule curs) (rCond r) ++ mixedCur ++ setAccCur
   where
     actionOk = case rAction r of
       ASetAccount (code, p)
@@ -111,6 +112,28 @@ checkRule env curs r = actionOk ++ checkCond (Ctx InRule curs) (rCond r)
       ANotify (t, p)
         | T.null t -> err p "빈 알림 메시지"
         | otherwise -> []
+    moneys = condMoneys (rCond r)
+    -- 한 rule 조건식의 Money 리터럴 통화는 1종이어야 한다. 2종째가 등장한
+    -- 리터럴 위치에서 오류 — 통화 간 산술·비교는 정의되지 않는다 (환산 금지).
+    mixedCur = case moneys of
+      (c0, _) : rest -> case [(c, p) | (c, p) <- rest, c /= c0] of
+        (c, p) : _ ->
+          err p ("혼합 통화: 한 rule 조건식에서 " <> c0 <> " 와 " <> c
+                   <> " 를 함께 쓸 수 없습니다")
+        [] -> []
+      [] -> []
+    -- 조건식 통화 (단일 통화일 때만 확정)
+    condCur = case moneys of
+      (c0, _) : _ | all ((== c0) . fst) moneys -> Just c0
+      _ -> Nothing
+    -- set account 대상 계정 통화는 조건식 Money 리터럴 통화와 일치해야 한다.
+    setAccCur = case (rAction r, condCur) of
+      (ASetAccount (code, p), Just c)
+        | Just acur <- Map.lookup code (envAccounts env)
+        , acur /= c ->
+            err p ("계정 " <> code <> " 통화(" <> acur <> ")가 조건식 통화("
+                     <> c <> ")와 다릅니다")
+      _ -> []
 
 checkCond :: Ctx -> Cond -> [CheckErr]
 checkCond ctx c = case c of

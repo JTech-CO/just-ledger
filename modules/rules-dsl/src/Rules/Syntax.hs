@@ -14,6 +14,8 @@ module Rules.Syntax
   , Expr (..)
   , Var (..)
   , exprPos
+  , condMoneys
+  , exprMoneys
   ) where
 
 import Data.Text (Text)
@@ -84,3 +86,23 @@ exprPos e = case e of
   EAdd p _ _   -> p
   ESub p _ _   -> p
   EMul p _ _   -> p
+
+-- | 조건식 안의 Money 리터럴 (통화, 위치) 를 소스 등장 순서로 수집한다.
+-- 검사 단계(rule 스코프 단일 통화 강제)와 평가 단계(txn 통화 가드)가 공유.
+condMoneys :: Cond -> [(Text, Pos)]
+condMoneys c = case c of
+  COr a b      -> condMoneys a ++ condMoneys b
+  CAnd a b     -> condMoneys a ++ condMoneys b
+  CNot a       -> condMoneys a
+  CCmp _ _ a b -> exprMoneys a ++ exprMoneys b
+  CRecurring _ -> []
+  CMatches _ _ -> []
+
+exprMoneys :: Expr -> [(Text, Pos)]
+exprMoneys e = case e of
+  EMoney p _ cur -> [(cur, p)]
+  EAdd _ a b     -> exprMoneys a ++ exprMoneys b
+  ESub _ a b     -> exprMoneys a ++ exprMoneys b
+  EMul _ a b     -> exprMoneys a ++ exprMoneys b
+  ENum _ _       -> []
+  EVar _ _       -> []

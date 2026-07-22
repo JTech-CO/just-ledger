@@ -1,4 +1,4 @@
 {"op":"check","src":"budget \"식비\" per month <= 400000 KRW where account in (5210) alert when spent > 0.8 * limit","accounts":[{"code":"5210","currency":"KRW"}]}
 {"op":"check","src":"budget \"식비\" per month <= 400000 KRW where account in (9999)","accounts":[{"code":"5210","currency":"KRW"}]}
 {"op":"eval","src":"budget \"식비\" per month <= 400000 KRW alert when spent > 0.8 * limit","accounts":[{"code":"5210","currency":"KRW"}],"spent":{"식비":"320001"}}
-{"op":"eval","src":"rule tag \"구독\" when merchant matches /넷플릭스|스포티파이/ and recurring","accounts":[{"code":"5210","currency":"KRW"}],"txn":{"amount_minor":"12900","merchant":"넷플릭스 월결제","recurring":true}}
+{"op":"eval","src":"rule tag \"구독\" when merchant matches /넷플릭스|스포티파이/ and recurring","accounts":[{"code":"5210","currency":"KRW"}],"txn":{"amount_minor":"12900","currency":"KRW","merchant":"넷플릭스 월결제","recurring":true}}
