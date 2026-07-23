@@ -13,8 +13,13 @@
 //	notify(msg)  — 알림 액션
 //	set_account(code) — 상대 계정 지정 액션
 //
+// 부수효과 채널은 위 3개 액션뿐이다. 규칙 실행 직전 prelude.lua 를 로드해 순수 헬퍼
+// 전역(money/text/date/rule)을 노출하지만, 이들은 새 능력이 아니라 위 액션 위에서
+// 규칙을 간결하게 쓰기 위한 라이브러리다 (금액 문자열 산술·상대처 매칭·날짜/요일·
+// 선언적 규칙 조합기). 소스는 prelude.lua, 단위 테스트는 prelude_test.lua.
+//
 // 금액 주의(INV-4): Lua number 는 float64 다 — 금액(amount_minor)은 반드시
-// '문자열'로 노출한다. 스크립트가 산술을 원하면 자릿수 비교 등 문자열로 한다.
+// '문자열'로 노출한다. 스크립트가 산술을 원하면 money.* 의 문자열 정수 연산을 쓴다.
 package sandbox
 
 import (
@@ -156,6 +161,11 @@ func runProtected(L *lua.LState, script string) (err error) {
 			err = fmt.Errorf("스크립트 런타임 중단: %v", r)
 		}
 	}()
+	// 규칙 작성 표준 라이브러리(money/text/date/rule)를 먼저 로드한다 — 규칙은 이
+	// 전역들 위에서 작성된다. prelude 는 신뢰 코드이므로 로드 실패는 버그로 취급한다.
+	if perr := L.DoString(preludeSource); perr != nil {
+		return fmt.Errorf("prelude 로드 실패: %w", perr)
+	}
 	return L.DoString(script)
 }
 
