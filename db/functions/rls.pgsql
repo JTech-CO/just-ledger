@@ -19,8 +19,9 @@ DECLARE
   t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
-    'account', 'txn', 'category_rule', 'budget', 'automation_script',
-    'ingest_batch', 'settlement_run', 'transfer_link', 'report_artifact'
+    'account', 'txn', 'category_rule', 'budget', 'budget_alert_log',
+    'automation_script', 'ingest_batch', 'settlement_run', 'transfer_link',
+    'report_artifact'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('DROP POLICY IF EXISTS p_owner_all ON %I', t);

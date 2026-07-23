@@ -17,6 +17,7 @@ DROP TABLE IF EXISTS
   ingest_payload,
   ingest_batch,
   category_rule,
+  budget_alert_log,
   budget,
   automation_script,
   account,

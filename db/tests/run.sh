@@ -107,15 +107,24 @@ OWNER2=$(sed -nE 's/.*OWNER2=([0-9a-fA-F-]{36}).*/\1/p' "$TMP/notify.out" | head
 if [ -z "$OWNER1" ] || [ -z "$OWNER2" ]; then
   echo "FAIL: 소유자 id 추출 실패"; exit 1
 fi
-# UUID 자체로 대조한다 (jsonb::text 의 공백 표기에 의존하지 않는다)
+# UUID 자체로 대조한다 (jsonb::text 의 공백 표기에 의존하지 않는다).
+# owner1 은 8건(balance 4·ingest 3·settlement 1), owner2 는 balance 2건을
+# 유발한다. 정확 건수를 단언해 owner_id 가 뒤바뀌는 완전 교차까지 잡는다 —
+# n>=1 만 보면 owner1↔owner2 가 통째로 뒤집혀도 통과해 버린다.
 n1=$(grep -c "$OWNER1" "$TMP/payloads.jsonl" || true)
 n2=$(grep -c "$OWNER2" "$TMP/payloads.jsonl" || true)
 nother=$(grep -vc "$OWNER1\|$OWNER2" "$TMP/payloads.jsonl" || true)
-echo "owner1 $n1건 / owner2 $n2건 / 그 외 $nother건"
-if [ "$n1" -lt 1 ] || [ "$n2" -lt 1 ] || [ "$nother" -ne 0 ]; then
-  echo "FAIL: 봉투 owner_id 격리 위반 (그 외 소유자 페이로드 $nother건)"; exit 1
+echo "owner1 $n1건(기대 8) / owner2 $n2건(기대 2) / 그 외 $nother건(기대 0)"
+if [ "$n1" -ne 8 ] || [ "$n2" -ne 2 ] || [ "$nother" -ne 0 ]; then
+  echo "FAIL: 봉투 owner_id 격리 위반 — 발행 소유자 분포가 기대와 다름"; exit 1
 fi
-echo "OK   소유자 격리: 모든 페이로드가 실제 소유자로 발행됨"
+# 교차 확인: owner2 의 balance_changed 두 건이 owner1 로 새지 않았는지
+# (owner2 계정 잔액이 owner1 봉투에 실리면 남의 금융 데이터 유출)
+o2bal=$(grep "$OWNER2" "$TMP/payloads.jsonl" | grep -c "balance_changed" || true)
+if [ "$o2bal" -ne 2 ]; then
+  echo "FAIL: owner2 balance_changed 가 $o2bal 건 (기대 2) — 소유자 교차 의심"; exit 1
+fi
+echo "OK   소유자 격리: 발행 분포 정확(8/2/0), 교차 없음"
 
 step "정리"
 "${PSQL_ADMIN[@]}" -c "DROP DATABASE IF EXISTS ${TEST_DB} WITH (FORCE)"

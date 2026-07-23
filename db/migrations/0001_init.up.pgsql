@@ -120,6 +120,21 @@ CREATE TABLE budget (
 );
 CREATE INDEX idx_budget_owner ON budget (owner_id);
 
+-- ── 6b. budget_alert_log ─────────────────────────────────────────────────
+-- 예산 임계 알림의 멱등 발화 기록 (M7 DoD 4 — 중복 발송 금지).
+-- realtime 감시자가 발화 전 INSERT ... ON CONFLICT DO NOTHING RETURNING 으로
+-- "이번이 처음인지"를 판정한다. 기록이 DB 에 남으므로 감시자가 재시작해도
+-- 같은 (예산, 기간) 알림이 다시 나가지 않는다. period_key 는 realtime 이 계산한
+-- 기간 문자열(월간 YYYY-MM / 분기 YYYY-Qn / 연간 YYYY) 이다.
+CREATE TABLE budget_alert_log (
+  owner_id   uuid NOT NULL REFERENCES app_user(id),
+  budget_id  uuid NOT NULL REFERENCES budget(id) ON DELETE CASCADE,
+  period_key text NOT NULL CHECK (period_key ~ '^[0-9]{4}(-(0[1-9]|1[0-2])|-Q[1-4])?$'),
+  fired_at   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (budget_id, period_key)
+);
+CREATE INDEX idx_budget_alert_owner ON budget_alert_log (owner_id);
+
 -- ── 7. automation_script ─────────────────────────────────────────────────
 CREATE TABLE automation_script (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -266,11 +281,17 @@ GRANT USAGE ON SCHEMA public TO ledger_app, ledger_worker, ledger_realtime;
 -- 마이그레이션을 적용한 로그인 롤(= 서비스가 접속하는 롤)이 SET ROLE 로 강등할 수
 -- 있도록 멤버십을 부여한다. 수퍼유저 배포에선 무해(이미 가능), 비수퍼유저 배포에서
 -- 이것이 없으면 앱 풀의 SET ROLE ledger_app 이 실패해 서비스가 기동하지 못한다.
+-- 개발·단일-롤 배포에서는 로그인 롤 하나(ledger)가 세 서비스를 모두 대행하며
+-- 각 커넥션이 SET ROLE 로 최소권한으로 강등한다. 실제 다중-롤 배포는 서비스별
+-- 로그인 롤을 두고 각기 한 서비스 롤만 수임하면 된다(이 GRANT 는 무해).
 DO $$
+DECLARE svc text;
 BEGIN
-  IF NOT pg_has_role(current_user, 'ledger_app', 'MEMBER') THEN
-    EXECUTE format('GRANT ledger_app TO %I', current_user);
-  END IF;
+  FOREACH svc IN ARRAY ARRAY['ledger_app', 'ledger_worker', 'ledger_realtime'] LOOP
+    IF NOT pg_has_role(current_user, svc, 'MEMBER') THEN
+      EXECUTE format('GRANT %I TO %I', svc, current_user);
+    END IF;
+  END LOOP;
 END $$;
 
 -- 워커 지원 함수 (역할 생성 이후에 적용해야 GRANT 가 성립한다)
@@ -294,8 +315,13 @@ GRANT SELECT, INSERT, UPDATE ON fx_rate TO ledger_worker;
 GRANT SELECT ON app_user, account, category_rule, budget, automation_script,
                 account_balance, transfer_link_member, v_period_totals TO ledger_worker;
 
--- realtime: 읽기 전용 (LISTEN 은 권한 불요)
-GRANT SELECT ON account, txn, entry, account_balance, v_period_totals TO ledger_realtime;
+-- realtime: 재접속 스냅샷·예산 감시에 필요한 읽기 + 알림 발화 로그 기록.
+-- (LISTEN 자체는 권한 불요) 예산 소진액 계산에 budget 을, 발화 멱등에
+-- budget_alert_log 의 SELECT/INSERT 를 준다. RLS 는 모든 롤에 적용되므로
+-- (BYPASSRLS 없음) 이 롤도 owner_id 정책을 통과해야 자기 것만 본다.
+GRANT SELECT ON account, txn, entry, account_balance, budget,
+                v_period_totals TO ledger_realtime;
+GRANT SELECT, INSERT ON budget_alert_log TO ledger_realtime;
 
 GRANT USAGE ON SEQUENCE entry_id_seq TO ledger_app, ledger_worker;
 
