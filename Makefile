@@ -44,6 +44,8 @@ up: ## 전체 스택 기동
 	docker compose -f infra/compose.yaml up -d
 down: ## 전체 스택 종료
 	docker compose -f infra/compose.yaml down
+smoke: ## M9 DoD 5 — 전체 스택 클린 기동 + 원장 E2E 스모크
+	bash infra/smoke.sh
 logs: ## 스택 로그 추적
 	docker compose -f infra/compose.yaml logs -f
 clean: ## 빌드 산출물 정리
