@@ -1,0 +1,71 @@
+/* 사이드바 계정 트리 — 배경은 본문보다 한 단계 어둡게 (--bg). */
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-3);
+  overflow-y: auto;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.groupLabel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-inline: var(--sp-2);
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.all,
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  width: 100%;
+  text-align: start;
+  border: none;
+  background: transparent;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+
+.all {
+  font-weight: 500;
+}
+
+.all:hover,
+.item:hover {
+  background: var(--row-hover);
+}
+
+/* 선택: 좌측 2px accent + 배경 (행 흔들림 없이) */
+.selected {
+  background: var(--row-hover);
+  box-shadow: inset 2px 0 0 0 var(--accent);
+}
+
+.code {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

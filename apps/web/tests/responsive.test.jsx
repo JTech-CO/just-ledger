@@ -1,0 +1,62 @@
+// @vitest-environment happy-dom
+// make a11y (M8) — 반응형·가로 스크롤(DoD 5) 규약을 CSS 소스로 검증한다.
+// happy-dom 은 레이아웃을 계산하지 않으므로 실제 픽셀 폭 대신 CSS 모듈 규칙에
+// 반응형 브레이크포인트·overflow 정책이 있는지, 그리고 금액 컬럼이 어떤
+// 브레이크포인트에서도 숨김(display:none)되지 않는지를 소스 단위로 확인한다.
+
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const clientDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'client');
+const read = (p) => readFileSync(join(clientDir, p), 'utf8');
+
+describe('가로 스크롤 정책 (DoD 5)', () => {
+  it('셸 본문은 가로 오버플로를 만들지 않는다 (min-width:0 로 축소 허용)', () => {
+    const css = read('components/layout/AppShell.module.css');
+    expect(css).toMatch(/min-width:\s*0/);
+  });
+
+  it('표 스크롤 영역은 세로만, 가로 오버플로는 hidden', () => {
+    const css = read('components/ledger/LedgerTable.module.css');
+    expect(css).toMatch(/overflow-x:\s*hidden/);
+    expect(css).toMatch(/overflow-y:\s*auto/);
+  });
+
+  it('고정폭 리포트 뷰어만 가로 스크롤을 허용한다(유일한 예외)', () => {
+    const css = read('components/report/FixedWidthReport.module.css');
+    expect(css).toMatch(/overflow-x:\s*auto/);
+  });
+});
+
+describe('반응형 브레이크포인트 (§4.2)', () => {
+  it('표에 1023·767 브레이크포인트가 있다', () => {
+    const css = read('components/ledger/LedgerTable.module.css');
+    expect(css).toMatch(/max-width:\s*1023px/);
+    expect(css).toMatch(/max-width:\s*767px/);
+  });
+
+  it('금액 컬럼은 어떤 브레이크포인트에서도 숨기지 않는다 (§4.2)', () => {
+    const css = read('components/ledger/LedgerTable.module.css');
+    // colAmount 에 display:none 이 붙는 규칙이 없어야 한다
+    const amountHidden = /\.colAmount[^{]*\{[^}]*display:\s*none/.test(css);
+    expect(amountHidden).toBe(false);
+    // 반대로 상대처(colCounter)는 좁은 폭에서 숨겨진다(금액과 대비)
+    expect(css).toMatch(/\.colCounter\s*\{\s*display:\s*none/);
+  });
+});
+
+describe('모션 정책 (DoD 6)', () => {
+  it('행 hover 는 배경만 — transform/scale 트랜지션 없음 (§2.2)', () => {
+    const css = read('components/ledger/LedgerTable.module.css');
+    // .row 단독 규칙(position:absolute 포함)의 transition 이 background-color 만인지
+    const m = css.match(/\.row\s*\{[^}]*position:\s*absolute[^}]*\}/);
+    expect(m).toBeTruthy();
+    // 주석을 제거하고 실제 선언만 본다 ("transform" 이 주석에 있어도 오탐 없게)
+    const rowRule = m[0].replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(rowRule).toMatch(/transition:\s*background-color/);
+    expect(rowRule).not.toMatch(/transform\s*:/);
+    expect(rowRule).not.toMatch(/scale\s*\(/);
+  });
+});

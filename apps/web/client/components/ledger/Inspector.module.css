@@ -1,0 +1,112 @@
+/* 상세 패널 — 데스크톱 우측 320px, 좌측 hairline. 태블릿 이하 하단 시트. */
+.panel {
+  width: 320px;
+  flex-shrink: 0;
+  border-inline-start: 1px solid var(--border);
+  background: var(--surface);
+  padding: var(--sp-4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.close:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.memo {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.entries {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 1.5em 1fr auto;
+  align-items: baseline;
+  column-gap: var(--sp-2);
+}
+
+.dir {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.account {
+  font-size: 13px;
+}
+
+.reason {
+  font-size: 13px;
+}
+
+.source {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--bg);
+  padding: var(--sp-2);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+}
+
+/* 태블릿 이하: 하단 시트 (§2.1) */
+@media (max-width: 1023px) {
+  .panel {
+    position: fixed;
+    inset: auto 0 0 0;
+    width: auto;
+    max-height: 60vh;
+    border-inline-start: none;
+    border-top: 1px solid var(--border);
+    box-shadow: var(--shadow-float);
+    z-index: 20;
+  }
+}

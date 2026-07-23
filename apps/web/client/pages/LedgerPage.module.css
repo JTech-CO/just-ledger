@@ -1,0 +1,71 @@
+/* 원장 페이지 — 중앙 영역 레이아웃. */
+.tableArea {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* 합계 행 = 푸터. sticky 하단, 표 컬럼과 우측 정렬 (§2.3). */
+.totals {
+  display: grid;
+  grid-template-columns: 1fr 128px 128px;
+  align-items: baseline;
+  column-gap: var(--sp-3);
+  padding: var(--sp-2) calc(var(--sp-3) + 36px) var(--sp-2) var(--sp-3);
+  border-top: 2px solid var(--border-strong);
+  background: var(--surface);
+  position: sticky;
+  bottom: 0;
+  font-weight: 600;
+}
+
+.totalsLabel {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.totals > :not(.totalsLabel) {
+  justify-self: end;
+}
+
+.entry {
+  padding: var(--sp-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.entryTitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.offline {
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--surface);
+  color: var(--warning);
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notice {
+  padding: var(--sp-2) var(--sp-4);
+  font-size: 13px;
+}
+
+.errorPage {
+  padding: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  align-items: flex-start;
+}
+
+@media (max-width: 767px) {
+  .totals {
+    grid-template-columns: 1fr auto auto;
+    padding-inline: var(--sp-3);
+  }
+}

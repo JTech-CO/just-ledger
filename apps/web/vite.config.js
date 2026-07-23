@@ -37,5 +37,7 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 60000,
+    // happy-dom 뷰포트·ResizeObserver stub (가상 스크롤 테스트용). node 환경엔 무영향.
+    setupFiles: ['./tests/setup.js'],
   },
 });

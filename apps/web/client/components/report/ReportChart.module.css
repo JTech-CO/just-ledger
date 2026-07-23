@@ -1,0 +1,11 @@
+/* R SVG 차트 뷰어 — 배경 투명, UI 와 이질감 없이 (§4.3). */
+.figure {
+  margin: 0;
+  background: transparent;
+}
+
+.chart {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}

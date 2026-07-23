@@ -1,0 +1,20 @@
+/* COBOL 리포트 뷰어 — 고정폭, 가로 스크롤 허용(가로 스크롤 금지의 유일한 예외). */
+.figure {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--radius);
+}
+
+.report {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+  padding: var(--sp-3);
+  color: var(--text);
+  margin: 0;
+}

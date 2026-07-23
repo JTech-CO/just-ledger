@@ -1,64 +1,135 @@
-// 원장 표 최소판 (M2). 가상 스크롤·마감선·Inspector 는 M8.
-// 금액 셀은 mono + tabular-nums (§5.2), 합계는 BigInt 문자열 연산 (INV-4).
+// 원장 표 — 가상 스크롤(@tanstack/react-virtual). 디자인 백서 §4.3.
+//   · 행 높이 고정 34px (내용으로 높이가 변하면 스크롤 계산이 흔들린다)
+//   · settled 기간의 행은 편집 컨트롤을 **DOM 에서 제외**(비활성 스타일 아님)
+//   · 기간 마지막 행 하단 마감선: settled 는 3px double, 마감 전은 예고선
+//   · 금액은 Money 원자(색+부호 병기), BigInt/문자열 경유 (INV-4)
+//
+// role="table" 시맨틱을 유지해 스크린리더·키보드 조작이 가능하다. 선택/편집은
+// 상위(키보드 훅)가 activeIndex·onSelect·onEdit 로 제어한다.
 
-import { formatMinor, sumByDirection } from '../../lib/money.js';
+import { useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { Pencil } from 'lucide-react';
+import { sumByDirection } from '../../lib/money.js';
+import Money from '../common/Money.jsx';
+import styles from './LedgerTable.module.css';
+
+const ROW_HEIGHT = 34;
+
+/** 월(YYYY-MM) 추출 — 기간 경계 판정 */
+const monthOf = (isoDate) => (typeof isoDate === 'string' ? isoDate.slice(0, 7) : '');
 
 /**
- * @param {{ rows: Array<Object>, accounts: Array<Object> }} props
+ * @param {object} props
+ * @param {Array<Object>} props.rows  txn 행 (occurred_on 정렬 가정)
+ * @param {Map<string,string>} props.accountName  account_id → "코드 이름"
+ * @param {number} props.activeIndex  키보드 활성 행 (-1 없음)
+ * @param {(index:number)=>void} props.onSelect
+ * @param {(txn:Object)=>void} [props.onEdit]
  */
-export default function LedgerTable({ rows, accounts }) {
-  const accountName = new Map(accounts.map((a) => [a.id, `${a.code} ${a.name}`]));
+export default function LedgerTable({ rows, accountName, activeIndex, onSelect, onEdit }) {
+  const parentRef = useRef(null);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 12,
+  });
 
   return (
-    <table aria-label="원장">
-      <thead>
-        <tr>
-          <th scope="col">날짜</th>
-          <th scope="col">적요</th>
-          <th scope="col">분개</th>
-          <th scope="col">상태</th>
-          <th scope="col" className="amount">차변</th>
-          <th scope="col" className="amount">대변</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.length === 0 && (
-          <tr>
-            <td colSpan={6} className="muted">거래가 없습니다. 아래에서 수기 입력하세요.</td>
-          </tr>
+    <div className={styles.wrap} role="table" aria-label="원장" aria-rowcount={rows.length}>
+      <div className={styles.head} role="row">
+        <span role="columnheader" className={styles.colDate}>날짜</span>
+        <span role="columnheader" className={styles.colMemo}>적요</span>
+        <span role="columnheader" className={styles.colCounter}>상대처</span>
+        <span role="columnheader" className={styles.colAccount}>계정</span>
+        <span role="columnheader" className={`${styles.colAmount} ${styles.amountHead}`}>차변</span>
+        <span role="columnheader" className={`${styles.colAmount} ${styles.amountHead}`}>대변</span>
+        <span role="columnheader" className={styles.colEdit} />
+      </div>
+
+      {rows.length === 0 ? (
+        <p className={styles.empty}>거래가 없습니다. 아래에서 수기 입력하거나 명세서를 올리세요.</p>
+      ) : (
+        <div ref={parentRef} className={styles.scroll} tabIndex={0} aria-label="원장 스크롤 영역">
+          <div className={styles.sizer} style={{ height: `${virtualizer.getTotalSize()}px` }}>
+            {virtualizer.getVirtualItems().map((vi) => {
+              const t = rows[vi.index];
+              const next = rows[vi.index + 1];
+              const isPeriodEnd = !next || monthOf(next.occurred_on) !== monthOf(t.occurred_on);
+              const settled = t.status === 'settled';
+              return (
+                <Row
+                  key={t.id}
+                  txn={t}
+                  rowIndex={vi.index}
+                  accountName={accountName}
+                  translateY={vi.start}
+                  active={vi.index === activeIndex}
+                  periodEnd={isPeriodEnd}
+                  settled={settled}
+                  onSelect={onSelect}
+                  onEdit={onEdit}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Row({ txn, rowIndex, accountName, translateY, active, periodEnd, settled, onSelect, onEdit }) {
+  let sums;
+  try {
+    sums = sumByDirection(txn.entries);
+  } catch {
+    sums = null;
+  }
+  const first = txn.entries?.[0];
+  const counter = first ? (accountName.get(first.account_id) ?? first.account_id) : '';
+  const periodClass = periodEnd ? (settled ? styles.periodEndSettled : styles.periodEndPending) : '';
+
+  return (
+    <div
+      role="row"
+      aria-rowindex={rowIndex + 1}
+      aria-selected={active}
+      data-txn-id={txn.id}
+      className={`${styles.row} ${active ? styles.active : ''} ${periodClass}`}
+      style={{ transform: `translateY(${translateY}px)` }}
+      onClick={() => onSelect(rowIndex)}
+    >
+      <span role="cell" className={`${styles.colDate} mono`}>{txn.occurred_on}</span>
+      <span role="cell" className={styles.colMemo}>{txn.memo || <span className="muted">—</span>}</span>
+      <span role="cell" className={styles.colCounter}>{counter}</span>
+      <span role="cell" className={`${styles.colAccount} muted`}>
+        {txn.entries?.length ?? 0}개 분개
+      </span>
+      <span role="cell" className={styles.colAmount}>
+        {sums ? <Money minor={sums.debit} tone="debit" /> : <span className="negative">오류</span>}
+      </span>
+      <span role="cell" className={styles.colAmount}>
+        {sums ? <Money minor={sums.credit} tone="credit" /> : null}
+      </span>
+      <span role="cell" className={styles.colEdit}>
+        {/* settled 기간은 편집 컨트롤을 렌더링하지 않는다 (DoD 7) */}
+        {!settled && onEdit && (
+          <button
+            type="button"
+            className={styles.editBtn}
+            aria-label={`${txn.occurred_on} 거래 편집`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(txn);
+            }}
+          >
+            <Pencil size={16} strokeWidth={1.75} aria-hidden="true" />
+          </button>
         )}
-        {rows.map((t) => {
-          // 비정상 데이터 1행이 표 전체를 죽이지 않도록 행 단위로 격리한다.
-          let sums;
-          try {
-            sums = sumByDirection(t.entries);
-          } catch {
-            return (
-              <tr key={t.id} data-txn-id={t.id}>
-                <td className="mono">{t.occurred_on}</td>
-                <td colSpan={5} className="negative">비정상 분개 데이터 (검사 필요)</td>
-              </tr>
-            );
-          }
-          return (
-            <tr key={t.id} data-txn-id={t.id}>
-              <td className="mono">{t.occurred_on}</td>
-              <td>{t.memo || <span className="muted">—</span>}</td>
-              <td className="muted">
-                {t.entries.map((e) => (
-                  <div key={e.id} data-entry-id={e.id}>
-                    {e.direction === 'debit' ? '차' : '대'} {accountName.get(e.account_id) ?? e.account_id}{' '}
-                    <span className="mono" data-amount={e.amount_minor}>{formatMinor(e.amount_minor)}</span>
-                  </div>
-                ))}
-              </td>
-              <td>{t.status}</td>
-              <td className="amount mono positive">{formatMinor(sums.debit)}</td>
-              <td className="amount mono negative">{formatMinor(sums.credit)}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+      </span>
+    </div>
   );
 }

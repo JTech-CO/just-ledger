@@ -1,0 +1,44 @@
+/* 금액 원자 — 숫자는 mono + tabular-nums 로 자릿수 정렬 (§5.2). */
+.money {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.symbol {
+  color: var(--text-muted);
+  margin-inline-end: 0.15em;
+}
+
+/* 부호는 색과 독립적으로 방향을 드러낸다 (색각 대응) */
+.sign {
+  color: inherit;
+}
+
+.digits {
+  color: var(--text);
+}
+
+/* 색은 부호를 보강만 한다 — 색만으로 구분하지 않는다 (§2.4) */
+.debit .digits,
+.debit .sign {
+  color: var(--positive);
+}
+
+.credit .digits,
+.credit .sign {
+  color: var(--negative);
+}
+
+/* 통화 코드는 스크린리더 전용(시각적으로는 기호로 충분) */
+.srCurrency {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

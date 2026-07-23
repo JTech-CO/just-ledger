@@ -20,20 +20,72 @@ export const useLedgerStore = create((set, get) => ({
   lastError: null,
   /** 초기/재조회 실패 여부 — 빈 원장과 구분해 재시도 UI 를 띄운다 */
   loadFailed: false,
+  /** @type {Set<string>} 방금 변한 잔액 키 — 120ms 하이라이트 1회 (§4.3) */
+  flashKeys: new Set(),
+  /** @type {Map<string, Object>} budget_id → 최근 budget_alert 프레임 (M7) */
+  budgetAlerts: new Map(),
+  /** @type {Map<string, Object>} batch_id → ingest_progress 상태 (M3/M7) */
+  ingest: new Map(),
+  /** 실시간 채널 연결 상태 — 끊김을 UI 에 표면화 (조용한 정지 금지) */
+  socketConnected: false,
 
   // ── 실시간 병합 단일 진입점 (M7 채널이 이 함수만 호출한다) ───────────────
+  // 프레임은 contracts/notify-event.schema.json — evt.type 으로 분기한다.
   applyRealtime(evt) {
-    if (evt.type === 'balance_changed') {
-      set((s) => {
-        const balances = new Map(s.balances);
-        balances.set(`${evt.row.account_id}:${evt.row.currency}`, evt.row.balance_minor);
-        return { balances };
-      });
-    } else if (evt.type === 'settlement_done') {
-      set({ isSettled: true });
-    } else if (evt.type === 'ingest_progress') {
-      // M3: 인제스트 진행률 슬라이스에 병합
+    switch (evt.type) {
+      case 'balance_changed': {
+        set((s) => {
+          const key = `${evt.row.account_id}:${evt.row.currency}`;
+          const balances = new Map(s.balances);
+          balances.set(key, evt.row.balance_minor);
+          const flashKeys = new Set(s.flashKeys);
+          flashKeys.add(key);
+          return { balances, flashKeys };
+        });
+        break;
+      }
+      case 'sync': {
+        // 재접속 보정(M7 DoD 3): 스냅샷으로 잔액 전체를 교체(수렴)
+        set(() => ({
+          balances: new Map(evt.balances.map((b) => [`${b.account_id}:${b.currency}`, b.balance_minor])),
+        }));
+        break;
+      }
+      case 'settlement_done':
+        set({ isSettled: true });
+        break;
+      case 'budget_alert':
+        set((s) => {
+          const budgetAlerts = new Map(s.budgetAlerts);
+          budgetAlerts.set(evt.budget_id, evt);
+          return { budgetAlerts };
+        });
+        break;
+      case 'ingest_progress':
+        set((s) => {
+          const ingest = new Map(s.ingest);
+          ingest.set(evt.batch_id, evt);
+          return { ingest };
+        });
+        break;
+      default:
+        // 알 수 없는 프레임은 무시 — 계약 밖 이벤트가 store 를 깨지 않는다
+        break;
     }
+  },
+
+  /** 하이라이트 종료 — 키 하나를 flash 집합에서 제거 (컴포넌트가 120ms 후 호출) */
+  clearFlash(key) {
+    set((s) => {
+      if (!s.flashKeys.has(key)) return {};
+      const flashKeys = new Set(s.flashKeys);
+      flashKeys.delete(key);
+      return { flashKeys };
+    });
+  },
+
+  setSocketConnected(connected) {
+    set({ socketConnected: connected });
   },
 
   // ── 조회 ────────────────────────────────────────────────────────────────

@@ -60,16 +60,15 @@ describe('M2 DoD 4 — 브라우저 경로 문자열 왕복 무손실', () => {
     await user.type(within(form).getByLabelText(/적요/), '왕복 검증');
     await user.click(within(form).getByRole('button', { name: '기입' }));
 
-    // 저장 후 재조회된 원장 표의 data-amount 가 원본 문자열과 정확히 일치
+    // 저장→재조회 후 잔액 요약이 원본 문자열을 정확히 보존한다 (credit 계정은
+    // 부호 반전). 잔액 요약은 일반 리스트(비가상)라 DOM 이 안정적이다. 원장 표는
+    // 가상 스크롤이라 happy-dom(레이아웃 미계산)에서 렌더가 불안정하므로, 표 금액의
+    // 무손실은 아래 서버 재조회로 교차 확인한다. Money 원자가 data-amount 로 원본
+    // minor 를 보존한다.
     await waitFor(() => {
-      const cells = document.querySelectorAll(`[data-amount="${AMOUNT}"]`);
-      expect(cells.length).toBe(2);   // debit + credit
-    });
-
-    // 잔액 요약도 동일 문자열 (credit 계정은 부호 반전)
-    await waitFor(() => {
-      expect(document.querySelector(`[data-balance="${AMOUNT}"]`)).not.toBeNull();
-      expect(document.querySelector(`[data-balance="-${AMOUNT}"]`)).not.toBeNull();
+      const summary = document.querySelector('[aria-label="잔액 요약"]');
+      expect(summary.querySelector(`[data-amount="${AMOUNT}"]`)).not.toBeNull();
+      expect(summary.querySelector(`[data-amount="-${AMOUNT}"]`)).not.toBeNull();
     });
 
     // 서버 재조회로 교차 확인 (UI 상태가 아닌 영속 상태)
