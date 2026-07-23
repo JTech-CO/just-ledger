@@ -10,6 +10,13 @@ export const SETTLE_IN_LEN = 81;
 export const SETTLE_OUT_LEN = 51;
 export const AMORT_IN_LEN = 67;
 export const AMORT_OUT_LEN = 79;
+export const INTEREST_IN_LEN = 63;
+export const INTEREST_OUT_LEN = 62;
+export const DEPREC_IN_LEN = 68;
+export const DEPREC_OUT_LEN = 64;
+
+/** 감가상각 회차 계약 상한 (copybook DI-PERIODS 1..360) */
+export const DEPREC_MAX_PERIODS = 360;
 
 /** 상각 회차 계약 상한 (copybook AI-PERIODS 1..360) */
 export const AMORT_MAX_PERIODS = 360;
@@ -169,4 +176,251 @@ export function parseAmortOut(line) {
     principal: sliceDigits(line, 49, 64, 'principal'),
     balance: sliceDigits(line, 64, 79, 'balance'),
   };
+}
+
+// ── INTEREST-IN-REC: ID16 METHOD1 P15 NUM9 DEN9 DAYS5 BASIS5 PER3 ──────────
+export function formatInterestIn(r) {
+  fitText(r.account_id, 16, 'account_id');
+  if (r.method !== 'S' && r.method !== 'C') {
+    throw new RangeError(`method: ${JSON.stringify(r.method)} (S|C 만 허용)`);
+  }
+  fitDigits(r.principal, 15, 'principal');
+  fitDigits(r.rate_num, 9, 'rate_num');
+  fitDigits(r.rate_den, 9, 'rate_den');
+  if (BigInt(r.rate_den) === 0n) throw new RangeError('rate_den: 0 은 허용되지 않음');
+  fitDigits(r.days, 5, 'days');
+  fitDigits(r.basis, 5, 'basis');
+  if (r.method === 'S' && BigInt(r.basis) === 0n) {
+    throw new RangeError('basis: simple 이자에 0 은 허용되지 않음');
+  }
+  fitDigits(r.periods, 3, 'periods');
+  return (
+    padR(r.account_id, 16) +
+    r.method +
+    padL(r.principal, 15) +
+    padL(r.rate_num, 9) +
+    padL(r.rate_den, 9) +
+    padL(r.days, 5) +
+    padL(r.basis, 5) +
+    padL(r.periods, 3)
+  );
+}
+
+export function parseInterestIn(line) {
+  if (line.length !== INTEREST_IN_LEN) {
+    throw new RangeError(`INTEREST-IN 레코드 길이 ${line.length} != ${INTEREST_IN_LEN}`);
+  }
+  return {
+    account_id: line.slice(0, 16).trimEnd(),
+    method: line.slice(16, 17),
+    principal: sliceDigits(line, 17, 32, 'principal'),
+    rate_num: sliceDigits(line, 32, 41, 'rate_num'),
+    rate_den: sliceDigits(line, 41, 50, 'rate_den'),
+    days: sliceDigits(line, 50, 55, 'days'),
+    basis: sliceDigits(line, 55, 60, 'basis'),
+    periods: sliceDigits(line, 60, 63, 'periods'),
+  };
+}
+
+// ── INTEREST-OUT-REC: ID16 METHOD1 P15 INT15 BAL15 ────────────────────────
+export function formatInterestOut(r) {
+  fitText(r.account_id, 16, 'account_id');
+  if (r.method !== 'S' && r.method !== 'C') {
+    throw new RangeError(`method: ${JSON.stringify(r.method)} (S|C 만 허용)`);
+  }
+  fitDigits(r.principal, 15, 'principal');
+  fitDigits(r.interest, 15, 'interest');
+  fitDigits(r.balance, 15, 'balance');
+  return (
+    padR(r.account_id, 16) +
+    r.method +
+    padL(r.principal, 15) +
+    padL(r.interest, 15) +
+    padL(r.balance, 15)
+  );
+}
+
+export function parseInterestOut(line) {
+  if (line.length !== INTEREST_OUT_LEN) {
+    throw new RangeError(`INTEREST-OUT 레코드 길이 ${line.length} != ${INTEREST_OUT_LEN}`);
+  }
+  return {
+    account_id: line.slice(0, 16).trimEnd(),
+    method: line.slice(16, 17),
+    principal: sliceDigits(line, 17, 32, 'principal'),
+    interest: sliceDigits(line, 32, 47, 'interest'),
+    balance: sliceDigits(line, 47, 62, 'balance'),
+  };
+}
+
+// ── DEPREC-IN-REC: ID16 METHOD1 COST15 SALVAGE15 NUM9 DEN9 PER3 ───────────
+export function formatDeprecIn(r) {
+  fitText(r.asset_id, 16, 'asset_id');
+  if (r.method !== 'L' && r.method !== 'D') {
+    throw new RangeError(`method: ${JSON.stringify(r.method)} (L|D 만 허용)`);
+  }
+  fitDigits(r.cost, 15, 'cost');
+  fitDigits(r.salvage, 15, 'salvage');
+  if (BigInt(r.salvage) > BigInt(r.cost)) {
+    throw new RangeError('salvage > cost 는 허용되지 않음');
+  }
+  fitDigits(r.rate_num, 9, 'rate_num');
+  fitDigits(r.rate_den, 9, 'rate_den');
+  if (r.method === 'D' && BigInt(r.rate_den) === 0n) {
+    throw new RangeError('rate_den: 정률법에 0 은 허용되지 않음');
+  }
+  fitDigits(r.periods, 3, 'periods');
+  const n = Number(r.periods);
+  if (n < 1 || n > DEPREC_MAX_PERIODS) {
+    throw new RangeError(`periods: ${r.periods} (1..${DEPREC_MAX_PERIODS} 만 허용)`);
+  }
+  return (
+    padR(r.asset_id, 16) +
+    r.method +
+    padL(r.cost, 15) +
+    padL(r.salvage, 15) +
+    padL(r.rate_num, 9) +
+    padL(r.rate_den, 9) +
+    padL(r.periods, 3)
+  );
+}
+
+export function parseDeprecIn(line) {
+  if (line.length !== DEPREC_IN_LEN) {
+    throw new RangeError(`DEPREC-IN 레코드 길이 ${line.length} != ${DEPREC_IN_LEN}`);
+  }
+  return {
+    asset_id: line.slice(0, 16).trimEnd(),
+    method: line.slice(16, 17),
+    cost: sliceDigits(line, 17, 32, 'cost'),
+    salvage: sliceDigits(line, 32, 47, 'salvage'),
+    rate_num: sliceDigits(line, 47, 56, 'rate_num'),
+    rate_den: sliceDigits(line, 56, 65, 'rate_den'),
+    periods: Number(sliceDigits(line, 65, 68, 'periods')),
+  };
+}
+
+// ── DEPREC-OUT-REC: ID16 PER3 DEPREC15 ACCUM15 BOOK15 ─────────────────────
+export function formatDeprecOut(assetId, r) {
+  fitText(assetId, 16, 'asset_id');
+  fitDigits(r.period, 3, 'period');
+  fitDigits(r.deprec, 15, 'deprec');
+  fitDigits(r.accum, 15, 'accum');
+  fitDigits(r.book, 15, 'book');
+  return (
+    padR(assetId, 16) +
+    padL(r.period, 3) +
+    padL(r.deprec, 15) +
+    padL(r.accum, 15) +
+    padL(r.book, 15)
+  );
+}
+
+export function parseDeprecOut(line) {
+  if (line.length !== DEPREC_OUT_LEN) {
+    throw new RangeError(`DEPREC-OUT 레코드 길이 ${line.length} != ${DEPREC_OUT_LEN}`);
+  }
+  return {
+    asset_id: line.slice(0, 16).trimEnd(),
+    period: Number(sliceDigits(line, 16, 19, 'period')),
+    deprec: sliceDigits(line, 19, 34, 'deprec'),
+    accum: sliceDigits(line, 34, 49, 'accum'),
+    book: sliceDigits(line, 49, 64, 'book'),
+  };
+}
+
+// ── 마감 요약 리포트 (report.cbl) ─────────────────────────────────────────
+// 입력은 header/detail 레코드(report-io.cpy), 출력은 고정폭 텍스트 문서.
+// COBOL 의 numeric-edited 렌더링(콤마 그룹핑·부동 부호·zero-suppress)을
+// 문자열 연산으로 1:1 재현한다 (부동소수점 미경유, 금액은 BigInt 만).
+export const REPORT_IN_DETAIL_LEN = 76; // 'D' 레코드 길이 (header 는 48, READ 시 공백 채움)
+export const REPORT_WIDTH = 86; // 렌더 줄 폭
+
+/** 세 자리마다 콤마 (COBOL Z-suppress + 콤마 삽입 의미론과 동일). */
+function groupThousands(digits) {
+  let out = '';
+  let c = 0;
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    out = digits[i] + out;
+    c += 1;
+    if (c % 3 === 0 && i > 0) out = ',' + out;
+  }
+  return out;
+}
+
+/** PIC +++,...,++9 (폭 27) 미러: 부동 부호·콤마·우측정렬. 0 이상은 '+'. */
+function editSignedAmount(v) {
+  const b = BigInt(v);
+  const neg = b < 0n;
+  const abs = (neg ? -b : b).toString();
+  const body = (neg ? '-' : '+') + groupThousands(abs);
+  if (body.length > 27) {
+    throw new RangeError(`net balance 폭 ${body.length} > 27`);
+  }
+  return body.padStart(27, ' ');
+}
+
+/** PIC ZZZ,ZZ9 (폭 7) 미러: zero-suppress·콤마·우측정렬. */
+function editCount(n) {
+  const g = groupThousands(String(n));
+  if (g.length > 7) throw new RangeError(`account count 폭 ${g.length} > 7`);
+  return g.padStart(7, ' ');
+}
+
+/** 'H' 헤더 레코드 (period 7 + title 40). 와이어 길이 48. */
+export function formatReportHeaderIn(h) {
+  fitText(h.period, 7, 'period');
+  fitText(h.title, 40, 'title');
+  return 'H' + padR(h.period, 7) + padR(h.title, 40);
+}
+
+/** 'D' 상세 레코드 (code 32 + name 24 + balance S9(18) sign-lead = 19). 길이 76. */
+export function formatReportDetailIn(d) {
+  fitText(d.code, 32, 'code');
+  fitText(d.name, 24, 'name');
+  return 'D' + padR(d.code, 32) + padR(d.name, 24) + signLeading(d.balance, 18);
+}
+
+/**
+ * 렌더된 리포트 텍스트 (report.cbl stdout 의 바이트 단위 미러).
+ * @param {{period: string, title: string}} header
+ * @param {Array<{code: string, name: string, balance: string}>} details
+ * @returns {string} 개행 종료된 다중행 문서
+ */
+export function formatReport(header, details) {
+  const W = REPORT_WIDTH;
+  const ruleD = '='.repeat(W);
+  const ruleS = '-'.repeat(W);
+  const period = padR(fitText(header.period, 7, 'period'), 7);
+  const title = padR(fitText(header.title, 40, 'title'), 40);
+  const lines = [];
+  lines.push(ruleD);
+  lines.push(padR('  JUST-LEDGER SETTLEMENT SUMMARY', W));
+  lines.push('  Period ' + period + '   ' + title + ' '.repeat(27));
+  lines.push(ruleD);
+  lines.push(
+    '  ' + padR('ACCOUNT CODE', 32) + ' ' + padR('ACCOUNT NAME', 24) +
+    '        BALANCE (KRW MINOR)',
+  );
+  lines.push(ruleS);
+  let total = 0n;
+  for (const d of details) {
+    const bal = BigInt(d.balance);
+    total += bal;
+    const code = padR(fitText(d.code, 32, 'code'), 32);
+    const name = padR(fitText(d.name, 24, 'name'), 24);
+    lines.push('  ' + code + ' ' + name + editSignedAmount(bal));
+  }
+  // COBOL 의 S9(18) 범위 초과는 edited move 에서 절삭되므로 사전 거절.
+  const LIM = 999999999999999999n;
+  if (total > LIM || total < -LIM) {
+    throw new RangeError('net total 이 S9(18) 을 초과');
+  }
+  lines.push(ruleS);
+  lines.push(
+    '  ACCOUNTS: ' + editCount(details.length) + ' '.repeat(30) +
+    'NET TOTAL' + ' ' + editSignedAmount(total),
+  );
+  lines.push(ruleD);
+  return lines.join('\n') + '\n';
 }

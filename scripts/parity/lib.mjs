@@ -78,6 +78,69 @@ export function levelPayment(principal, num, den, n) {
 }
 
 /**
+ * 단리(일할) 이자 참조 — copybook(interest-io.cpy) 'S' 의미론과 1:1.
+ * interest = round_half_even(principal · num · days, den · basis).
+ * 하루치가 아니라 전체 span 을 한 번만 반올림한다 (day-count accrual).
+ * @param {bigint} principal @param {bigint} num @param {bigint} den
+ * @param {bigint} days @param {bigint} basis (basis > 0)
+ * @returns {bigint} 누적 이자 (>= 0)
+ */
+export function simpleInterest(principal, num, den, days, basis) {
+  if (basis <= 0n) throw new RangeError('basis > 0 이어야 합니다');
+  return roundHalfEven(principal * num * days, den * basis);
+}
+
+/**
+ * 복리(회차별) 이자 참조 — copybook(interest-io.cpy) 'C' 의미론과 1:1.
+ * 잔액에 회차마다 round_half_even(balance · num, den) 이자를 붙인다.
+ * num/den 은 회차당 이율이며, 반올림은 회차마다(은행 관행) — 끝으로
+ * 미룰 수 없다(그러면 COBOL 과 갈라짐). 총이자 = 종료잔액 - 원금.
+ * @param {bigint} principal @param {bigint} num @param {bigint} den
+ * @param {number} periods (>= 0)
+ * @returns {bigint} 누적 이자 (>= 0)
+ */
+export function compoundInterest(principal, num, den, periods) {
+  let balance = principal;
+  for (let k = 0; k < periods; k += 1) {
+    balance += roundHalfEven(balance * num, den);
+  }
+  return balance - principal;
+}
+
+/**
+ * 이자 배치 참조 — 한 입력 레코드 → 한 출력 레코드.
+ * @param {{account_id: string, method: 'S'|'C', principal: string,
+ *   rate_num: string, rate_den: string, days: string, basis: string,
+ *   periods: string}} rec
+ * @returns {{account_id: string, method: string, principal: string,
+ *   interest: string, balance: string}}
+ */
+export function interestReference(rec) {
+  if (rec.method !== 'S' && rec.method !== 'C') {
+    throw new RangeError(`method ${JSON.stringify(rec.method)} (S|C 만 허용)`);
+  }
+  const principal = BigInt(rec.principal);
+  const num = BigInt(rec.rate_num);
+  const den = BigInt(rec.rate_den);
+  if (den <= 0n) throw new RangeError('rate_den > 0 이어야 합니다');
+  let interest;
+  if (rec.method === 'S') {
+    interest = simpleInterest(principal, num, den, BigInt(rec.days), BigInt(rec.basis));
+  } else {
+    // no-float-ok: periods 는 회차 수(루프 상한)일 뿐 금액이 아님
+    interest = compoundInterest(principal, num, den, Number(rec.periods));
+  }
+  const balance = principal + interest;
+  return {
+    account_id: rec.account_id,
+    method: rec.method,
+    principal: principal.toString(),
+    interest: interest.toString(),
+    balance: balance.toString(),
+  };
+}
+
+/**
  * 상각 스케줄 참조 — copybook(amort-io.cpy) 의미론과 1:1.
  * 각 회차 이자 = round_half_even(balance·num, den).
  * k<n: 원금 = clamp(A - 이자, 0, 잔액) — 음수 상각 미표현·과다상환 방지.
@@ -112,6 +175,66 @@ export function amortReference(principal, num, den, n) {
       interest: interest.toString(),
       principal: princ.toString(),
       balance: balance.toString(),
+    });
+  }
+  return rows;
+}
+
+/**
+ * 감가상각 스케줄 참조 — copybook(deprec-io.cpy) 의미론과 1:1.
+ * 대출 상각(amortReference)과 달리 고정자산의 장부가를 내용연수에 걸쳐
+ * 잔존가치까지 내린다(마감 시 자산 상각). 두 방법:
+ *   'L' 정액법: 매기 = round_half_even(cost - salvage, n).
+ *   'D' 정률법: 매기 = round_half_even(book · num, den), 잔존가치 하한 클램프.
+ * 두 방법 모두 마지막 회차가 잔여를 흡수해 종료 장부가 = salvage 정확히.
+ * 조기 소진 후 회차는 상각 0 행. 모든 출력 값 >= 0.
+ * @param {{method: 'L'|'D', cost: string, salvage: string,
+ *   rate_num: string, rate_den: string, periods: string}} rec
+ * @returns {Array<{period: number, deprec: string, accum: string,
+ *   book: string}>}
+ */
+export function deprecReference(rec) {
+  if (rec.method !== 'L' && rec.method !== 'D') {
+    throw new RangeError(`method ${JSON.stringify(rec.method)} (L|D 만 허용)`);
+  }
+  const cost = BigInt(rec.cost);
+  const salvage = BigInt(rec.salvage);
+  // no-float-ok: periods 는 회차 수(루프 상한)일 뿐 금액이 아님
+  const n = Number(rec.periods);
+  if (salvage > cost) throw new RangeError('salvage > cost (상각 기준액 음수)');
+  const rows = [];
+  const base = cost - salvage; // 총 상각 대상액
+  let accum = 0n;
+  let book = cost;
+  const num = rec.method === 'D' ? BigInt(rec.rate_num) : 0n;
+  const den = rec.method === 'D' ? BigInt(rec.rate_den) : 1n;
+  if (rec.method === 'D' && den <= 0n) {
+    throw new RangeError('rate_den > 0 이어야 합니다');
+  }
+  const per = rec.method === 'L' ? roundHalfEven(base, BigInt(n)) : 0n;
+  for (let k = 1; k <= n; k += 1) {
+    let dep;
+    if (k === n) {
+      // 마지막 회차: 잔여 흡수 → 장부가 정확히 salvage
+      dep = book - salvage;
+    } else if (rec.method === 'L') {
+      dep = per;
+      if (dep < 0n) dep = 0n;
+      const remain = base - accum;
+      if (dep > remain) dep = remain;
+    } else {
+      dep = roundHalfEven(book * num, den);
+      if (dep < 0n) dep = 0n;
+      const floor = book - salvage; // 잔존가치 아래로 내려가지 않음
+      if (dep > floor) dep = floor;
+    }
+    accum += dep;
+    book -= dep;
+    rows.push({
+      period: k,
+      deprec: dep.toString(),
+      accum: accum.toString(),
+      book: book.toString(),
     });
   }
   return rows;

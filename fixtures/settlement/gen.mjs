@@ -8,12 +8,22 @@
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { settleReference, amortReference, levelPayment } from '../../scripts/parity/lib.mjs';
+import {
+  settleReference, amortReference, levelPayment, interestReference,
+  deprecReference,
+} from '../../scripts/parity/lib.mjs';
 import {
   formatSettleIn as settleInLine,
   formatSettleOut as settleOutLine,
   formatAmortIn as amortInLine,
   formatAmortOut as amortOutLine,
+  formatInterestIn as interestInLine,
+  formatInterestOut as interestOutLine,
+  formatReportHeaderIn as reportHeaderLine,
+  formatReportDetailIn as reportDetailLine,
+  formatReport,
+  formatDeprecIn as deprecInLine,
+  formatDeprecOut as deprecOutLine,
 } from '../../scripts/parity/records.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -105,9 +115,100 @@ function writeAmort() {
   return { loans: inLines.length, rows: outLines.length };
 }
 
+// ── 이자 배치 픽스처 ────────────────────────────────────────────────────────
+// 단리(day-count)와 복리(회차별)를 섞고, 반올림이 실제로 갈리는 0.5 경계와
+// 현실적인 예금·연체 케이스를 함께 넣는다. days/basis 는 'S' 에서만, periods 는
+// 'C' 에서만 유효(미사용 필드는 0). 부동소수점 미경유(정수·유리수만).
+const INTEREST_ROWS = [
+  // 연 3% 예금 1년(365/365) → 정확히 3% = 300,000 (깔끔한 정수)
+  { account_id: 'DEP.0001', method: 'S', principal: '10000000', rate_num: '3', rate_den: '100', days: '365', basis: '365', periods: '0' },
+  // 90일 2.5% actual/365 예금 → 회차 없는 일할, 반올림 발생
+  { account_id: 'DEP.0002', method: 'S', principal: '50000000', rate_num: '25', rate_den: '1000', days: '90', basis: '365', periods: '0' },
+  // 30/360 basis 로 30일 6% → 반올림 경계 관찰
+  { account_id: 'DEP.0003', method: 'S', principal: '1234567', rate_num: '6', rate_den: '100', days: '30', basis: '360', periods: '0' },
+  // 0.5 정확히 → 짝수로 내림(2.5→2 아님, 1*1/2=0.5→0)
+  { account_id: 'BND.I001', method: 'S', principal: '1', rate_num: '1', rate_den: '2', days: '1', basis: '1', periods: '0' },
+  // 1.5→2 (짝수로 올림): 3*1/2
+  { account_id: 'BND.I002', method: 'S', principal: '3', rate_num: '1', rate_den: '2', days: '1', basis: '1', periods: '0' },
+  // 연 18% 대출 연체 45일(actual/365) — 연체 이자
+  { account_id: 'LATE.001', method: 'S', principal: '3000000', rate_num: '18', rate_den: '100', days: '45', basis: '365', periods: '0' },
+  // 월복리 1% 12회 — 회차마다 반올림(은행 관행)
+  { account_id: 'CMP.0001', method: 'C', principal: '1000000', rate_num: '1', rate_den: '100', days: '0', basis: '0', periods: '12' },
+  // 회차당 0.5% 24회 복리
+  { account_id: 'CMP.0002', method: 'C', principal: '100000000', rate_num: '5', rate_den: '1000', days: '0', basis: '0', periods: '24' },
+  // 복리 0.5 경계: 100*1/2=50 정확 → 1회차 이자 50, 잔액 150
+  { account_id: 'CMP.B001', method: 'C', principal: '100', rate_num: '1', rate_den: '2', days: '0', basis: '0', periods: '1' },
+  // 복리 조기 소멸: 1*1/2=0.5→0 → 이자 0, 3회차 전부 잔액 1 (반올림 짝수)
+  { account_id: 'CMP.B002', method: 'C', principal: '1', rate_num: '1', rate_den: '2', days: '0', basis: '0', periods: '3' },
+  // periods 0 → 이자 0 (복리 무회차)
+  { account_id: 'CMP.Z000', method: 'C', principal: '777', rate_num: '5', rate_den: '100', days: '0', basis: '0', periods: '0' },
+];
+
+function writeInterest() {
+  const inLines = INTEREST_ROWS.map(interestInLine);
+  const outLines = INTEREST_ROWS.map((r) => interestOutLine(interestReference(r)));
+  writeFileSync(join(here, 'interest.in.dat'), inLines.join('\n') + '\n');
+  writeFileSync(join(here, 'interest.expected.dat'), outLines.join('\n') + '\n');
+  return { rows: inLines.length };
+}
+
+// ── 마감 요약 리포트 픽스처 ──────────────────────────────────────────────────
+// 한 header + 정렬된 상세 계정(양수·음수·0 잔액 혼합)을 렌더한다. 콤마 그룹핑,
+// 부동 부호(+/-), 0 잔액의 "+0", 순합계 누적을 함께 검증한다.
+const REPORT_HEADER = { period: '2026-06', title: 'Household Ledger' };
+const REPORT_DETAILS = [
+  { code: 'ACC.0001', name: 'Checking', balance: '12345678' },
+  { code: 'ACC.0002', name: 'Savings', balance: '150000000' },
+  { code: 'ACC.0003', name: 'Credit Card', balance: '-3450000' },
+  { code: 'ACC.0004', name: 'Cash', balance: '0' },
+  { code: 'ACC.0005', name: 'Investment', balance: '987654321' },
+];
+
+function writeReport() {
+  const inLines = [reportHeaderLine(REPORT_HEADER)];
+  for (const d of REPORT_DETAILS) inLines.push(reportDetailLine(d));
+  writeFileSync(join(here, 'report.in.dat'), inLines.join('\n') + '\n');
+  writeFileSync(join(here, 'report.expected.dat'), formatReport(REPORT_HEADER, REPORT_DETAILS));
+  return { rows: REPORT_DETAILS.length };
+}
+
+// ── 감가상각 픽스처 ─────────────────────────────────────────────────────────
+// 정액법(L)·정률법(D)을 섞고, 반올림 경계·잔존가치 조기 도달(클램프)·마지막
+// 회차 잔여 흡수(종료 장부가 = salvage)를 함께 검증한다. 정수·유리수만.
+const DEPREC_ASSETS = [
+  // 정액법: base 9,000,000 / 5 = 1,800,000 균등, 장부가 10,000,000→1,000,000
+  { asset_id: 'AST.0001', method: 'L', cost: '10000000', salvage: '1000000', rate_num: '0', rate_den: '1', periods: '5' },
+  // 정액법 반올림: 1,000,000/3 → 333,333, 마지막 회차 잔여 흡수(333,334)
+  { asset_id: 'AST.0002', method: 'L', cost: '1000000', salvage: '0', rate_num: '0', rate_den: '1', periods: '3' },
+  // 정액법 0.5 경계: base 5 / 2 = round(2.5)=2 (짝수), 마지막 회차 3
+  { asset_id: 'AST.B001', method: 'L', cost: '5', salvage: '0', rate_num: '0', rate_den: '1', periods: '2' },
+  // 정률법 25%: 매기 round(book*25/100), 잔존가치 하한, 마지막 회차 흡수
+  { asset_id: 'AST.0003', method: 'D', cost: '10000000', salvage: '1000000', rate_num: '25', rate_den: '100', periods: '5' },
+  // 정률법 조기 도달: 90% → 1회차에 잔존가치 클램프, 이후 상각 0
+  { asset_id: 'AST.0004', method: 'D', cost: '1000000', salvage: '500000', rate_num: '90', rate_den: '100', periods: '4' },
+];
+
+function writeDeprec() {
+  const inLines = [];
+  const outLines = [];
+  for (const a of DEPREC_ASSETS) {
+    inLines.push(deprecInLine(a));
+    for (const r of deprecReference(a)) outLines.push(deprecOutLine(a.asset_id, r));
+  }
+  writeFileSync(join(here, 'deprec.in.dat'), inLines.join('\n') + '\n');
+  writeFileSync(join(here, 'deprec.expected.dat'), outLines.join('\n') + '\n');
+  return { assets: inLines.length, rows: outLines.length };
+}
+
 const boundary = writeSettle('boundary', genSettleBoundary());
 const bulk = writeSettle('bulk', genSettle(10000, 20260722));
 const amort = writeAmort();
+const interest = writeInterest();
+const report = writeReport();
+const deprec = writeDeprec();
 console.log(`settle-boundary: in ${boundary.in} / out ${boundary.out}`);
 console.log(`settle-bulk: in ${bulk.in} / out ${bulk.out} (INV-7 규모)`);
 console.log(`amort: loans ${amort.loans} / rows ${amort.rows}`);
+console.log(`interest: rows ${interest.rows}`);
+console.log(`report: detail rows ${report.rows}`);
+console.log(`deprec: assets ${deprec.assets} / rows ${deprec.rows}`);

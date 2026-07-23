@@ -1,0 +1,6 @@
+H2026-06Household Ledger                        
+DACC.0001                        Checking                +000000000012345678
+DACC.0002                        Savings                 +000000000150000000
+DACC.0003                        Credit Card             -000000000003450000
+DACC.0004                        Cash                    +000000000000000000
+DACC.0005                        Investment              +000000000987654321
