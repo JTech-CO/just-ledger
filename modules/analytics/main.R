@@ -7,6 +7,9 @@
 #   {"kind":"forecast","spent_so_far_minor":"...","daily_history_minor":[...],
 #    "days_remaining":N,"limit_minor":"...","iterations":10000,"seed":N}
 #   {"kind":"report","name":"...","series":[...]}   ← anomaly 재사용 + SVG 2벌
+#   {"kind":"summary","series":[...]}               ← 기간 요약 통계
+#   {"kind":"hampel","series":[...],"half_window":3,"t":3.0}  ← 국소 이상치
+#   {"kind":"weekly","name":"...","series":[...]}   ← 주간 합계 막대 SVG 2벌
 #
 # 결정론(M6 DoD 1): 시드는 요청 필드로만 받는다. 출력에 타임스탬프·절대경로
 # 등 비결정 값을 넣지 않는다. 고정 시드 재실행은 stdout·SVG 바이트 동일.
@@ -28,7 +31,8 @@ suppressPackageStartupMessages({
 argv <- commandArgs(trailingOnly = FALSE)
 self <- sub("^--file=", "", grep("^--file=", argv, value = TRUE)[1])
 base_dir <- dirname(normalizePath(self))
-R_FILES <- file.path(base_dir, "R", c("tokens.R", "anomaly.R", "forecast.R", "report.R"))
+R_FILES <- file.path(base_dir, "R",
+                     c("tokens.R", "anomaly.R", "forecast.R", "report.R", "summary.R"))
 for (f in R_FILES) source(f)
 
 # ── 인자 파싱 — 미지 인자·값 없는 플래그는 조용히 무시하지 않는다 ───────────
@@ -166,6 +170,56 @@ handle <- function(req) {
     return(list(ok = TRUE, kind = "forecast",
                 exceed_probability = f$exceed_probability,
                 iterations = f$iterations))
+  }
+  if (kind == "summary") {
+    s <- req$series
+    if (is.null(s) || is.null(s$amount_minor) || length(s$amount_minor) == 0) {
+      stop("series 가 비어 있습니다")
+    }
+    sm <- period_summary(s$amount_minor)
+    return(c(list(ok = TRUE, kind = "summary"), sm))
+  }
+  if (kind == "hampel") {
+    s <- req$series
+    if (is.null(s) || is.null(s$amount_minor) || length(s$amount_minor) == 0) {
+      stop("series 가 비어 있습니다")
+    }
+    hw <- if (is.null(req$half_window)) HAMPEL_K else req$half_window
+    th <- if (is.null(req$t)) HAMPEL_T else req$t
+    h <- hampel_anomalies(s$amount_minor, hw, th)
+    return(list(
+      ok = TRUE, kind = "hampel",
+      anomalies = if (length(h$indices) == 0) list() else lapply(
+        seq_along(h$indices),
+        function(i) list(
+          date = if (is.null(s$date)) NULL else s$date[h$indices[i]],
+          amount_minor = s$amount_minor[h$indices[i]],
+          score = h$score[i]
+        )
+      ),
+      n = length(s$amount_minor), half_window = h$half_window,
+      threshold = h$threshold
+    ))
+  }
+  if (kind == "weekly") {
+    if (inherits(tokens, "error")) {
+      message(sprintf("analytics: 디자인 토큰 로드 실패 — %s", conditionMessage(tokens)))
+      quit(save = "no", status = 3)
+    }
+    s <- req$series
+    if (is.null(s) || is.null(s$amount_minor) || length(s$amount_minor) == 0) {
+      stop("series 가 비어 있습니다")
+    }
+    nm <- req$name
+    if (is.null(nm) || length(nm) != 1) stop("weekly 요청에 name 이 필요합니다")
+    if (nm %in% RUN$names) {
+      stop(sprintf("report name 중복: %s (같은 배치에서 SVG 를 덮어씁니다)", nm))
+    }
+    RUN$names <- c(RUN$names, nm)
+    wb <- render_weekly_bars(nm, s$amount_minor, tokens, out_dir)
+    RUN$svg <- c(RUN$svg, wb$files)
+    return(list(ok = TRUE, kind = "weekly", n = length(s$amount_minor),
+                buckets = wb$buckets, files = as.list(wb$files)))
   }
   stop(sprintf("알 수 없는 kind: %s", kind))
 }

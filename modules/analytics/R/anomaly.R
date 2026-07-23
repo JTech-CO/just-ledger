@@ -65,3 +65,62 @@ detect_anomalies <- function(dates, amounts) {
   }
   list(indices = idx, robust_z = z_str, threshold = sprintf("%.1f", Z_THRESHOLD))
 }
+
+# ── Hampel 국소 이상치 필터 (STL 전역법과 상보) ─────────────────────────────
+# STL+MAD 는 계열 전체의 잔차 한 벌로 판정한다. 그래서 추세·레벨 이동 부근이나
+# 계열이 짧은 구간의 국소 스파이크를 전역 스케일에 묻혀 놓칠 수 있다. Hampel 은
+# 각 시점 주위의 슬라이딩 창(반폭 K, 길이 2K+1)에서 중앙값·MAD 를 구해 국소로
+# 판정하므로, 이웃 대비 튀는 값에 민감하고 레벨 이동에 강건하다. RNG 를 쓰지
+# 않아 항상 결정론적이다(재실행 바이트 동일).
+HAMPEL_K <- 3L          # 창 반폭 기본값 — 총 창 길이 2K+1 = 7
+HAMPEL_T <- 3.0         # 임계(로버스트 표준편차 배수)
+HAMPEL_SCALE <- 1.4826  # MAD → 정규분포 표준편차 일치 상수
+
+#' Hampel 국소 이상치 탐지
+#' @param amounts 금액 문자열 벡터 (최소 화폐 단위 정수)
+#' @param half_window 창 반폭 (>=1 정수)
+#' @param t 임계 배수 (>0)
+#' @return list(indices(1-기준), score(chr), half_window, threshold)
+hampel_anomalies <- function(amounts, half_window = HAMPEL_K, t = HAMPEL_T) {
+  if (!is.numeric(half_window) || half_window != as.integer(half_window) ||
+      half_window < 1) {
+    stop("half_window 는 1 이상 정수여야 합니다")
+  }
+  if (!is.numeric(t) || length(t) != 1 || t <= 0) stop("t 는 양수여야 합니다")
+  half_window <- as.integer(half_window)
+  x <- amounts_to_numeric(amounts, "series.amount_minor")
+  n <- length(x)
+  if (n < 2L * half_window + 1L) {
+    stop(sprintf("Hampel 에는 최소 %d개(창 2×%d+1) 관측이 필요합니다",
+                 2L * half_window + 1L, half_window))
+  }
+  idx <- integer(0)
+  sc <- character(0)
+  for (i in seq_len(n)) {
+    lo <- max(1L, i - half_window)
+    hi <- min(n, i + half_window)
+    w <- x[lo:hi]
+    med <- stats::median(w)
+    mad0 <- stats::median(abs(w - med)) * HAMPEL_SCALE
+    dev <- x[i] - med
+    # 금액은 정수 최소단위다. 로버스트 스케일이 0.5 미만이면 사실상 무변동 창이며,
+    # 이때 z 로 나누면 median 계산의 부동소수 잡음이 증폭되어 정상값이 이상치로
+    # 샌다. anomaly.R 의 STL 경로와 동일하게 절대편차 0.5 로 가른다.
+    if (mad0 < 0.5) {
+      if (abs(dev) > 0.5) {
+        idx <- c(idx, i)
+        sc <- c(sc, if (dev < 0) "-Inf" else "Inf")
+      }
+    } else {
+      z <- dev / mad0
+      if (abs(z) > t) {
+        s <- sprintf("%.2f", z)
+        if (s == "-0.00") s <- "0.00"
+        idx <- c(idx, i)
+        sc <- c(sc, s)
+      }
+    }
+  }
+  list(indices = idx, score = sc, half_window = half_window,
+       threshold = sprintf("%.1f", t))
+}

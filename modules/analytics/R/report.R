@@ -72,3 +72,51 @@ render_report <- function(name, dates, amounts, anomaly_idx, tokens, out_dir) {
   }
   files
 }
+
+#' 주간 합계 막대 리포트 — 일별 시계열을 7일 버킷으로 합산해 막대로 그린다.
+#' 시계열 라인(개별 값)과 달리 집계 흐름을 보여주는 별개의 리포트다.
+#' 버킷 합계는 실제 금액이므로 정확 정수 문자열(int_string_sum)로 반환하고,
+#' 막대 높이는 플롯 기하값이라 수치로 변환한다(render_report 의 라인과 동일 규율).
+#' @param name 파일 이름 줄기 ([A-Za-z0-9._-]+)
+#' @param amounts 금액 문자열 벡터 (최소 화폐 단위 정수, 일별 연속)
+#' @param tokens load_tokens() 결과, @param out_dir 산출 디렉터리
+#' @return list(files = 파일명 벡터, buckets = list(index,total_minor))
+render_weekly_bars <- function(name, amounts, tokens, out_dir) {
+  if (!grepl("^[A-Za-z0-9._-]+$", name)) {
+    stop("report name 은 [A-Za-z0-9._-]+ 만 허용합니다")
+  }
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+  n <- length(amounts)
+  bucket <- ((seq_len(n) - 1L) %/% 7L) + 1L
+  nb <- max(bucket)
+  totals <- character(nb)
+  heights <- numeric(nb)
+  for (b in seq_len(nb)) {
+    grp <- amounts[bucket == b]
+    totals[b] <- int_string_sum(grp)                        # 정확 합(정수 문자열)
+    heights[b] <- amounts_to_numeric(totals[b], "bucket.total")  # 플롯용 수치
+  }
+  d <- data.frame(week = seq_len(nb), total = heights)
+  files <- character(0)
+  for (theme_name in c("light", "dark")) {
+    tok <- tokens[[theme_name]]
+    p <- ggplot2::ggplot(d, ggplot2::aes(x = week, y = total)) +
+      ggplot2::geom_col(fill = tok[["accent"]], width = 0.7) +
+      ggplot2::scale_y_continuous(labels = money_axis_labels) +
+      ggplot2::scale_x_continuous(breaks = seq_len(nb)) +
+      ggplot2::labs(title = name, x = NULL, y = NULL) +
+      tokened_theme(tok)
+    fname <- sprintf("%s-%s.svg", name, theme_name)
+    svglite::svglite(file.path(out_dir, fname), width = 8, height = 4.5,
+                     bg = "transparent")
+    print(p)
+    grDevices::dev.off()
+    files <- c(files, fname)
+  }
+  list(
+    files = files,
+    buckets = lapply(seq_len(nb), function(b) {
+      list(index = b, total_minor = totals[b])
+    })
+  )
+}

@@ -275,6 +275,92 @@ check(isTRUE(e15), "경계: n=15 는 통과", sprintf("(%s)", e15))
         "report: 2^31 초과 금액 y축 라벨 정상 (NA 없음)")
 }
 
+# ── T9: 요약 통계·Hampel 국소 이상치·주간 막대 리포트 (M9 추가 기능) ──────────
+# 결정론·수치 정확성·SVG 토큰 색을 골든으로 고정한다. 총액은 실제 금액이므로
+# double(2^53) 을 경유하지 않는 정확 정수 문자열 합을 단언한다(INV-4 정신).
+source(file.path(mod_dir, "R", "summary.R"))
+
+# (1) int_string_sum — double 2^53 한계를 넘는 정확 정수 합
+check(identical(int_string_sum(c("100", "200", "300", "400", "500")), "1500"),
+      "int_string_sum: 기본 합")
+check(identical(int_string_sum(c("9007199254740992", "1")), "9007199254740993"),
+      "int_string_sum: 2^53 초과 정확(double 이면 침묵 반올림)")
+check(identical(int_string_sum(rep("9999999999999999", 3)), "29999999999999997"),
+      "int_string_sum: 자리올림 연쇄")
+check(identical(int_string_sum(c("-5", "3")), "-2") &&
+        identical(int_string_sum(c("5", "-5")), "0") &&
+        identical(int_string_sum(c("-100", "-200")), "-300"),
+      "int_string_sum: 부호 혼합·상쇄·음수")
+check(identical(int_string_sum(character(0)), "0"), "int_string_sum: 빈 벡터 → 0")
+
+# (2) period_summary — 정확 총액·최소·최대(정수 문자열) + 파생 지표(고정 자릿수)
+sm <- period_summary(as.character(c(100, 200, 300, 400, 500)))
+check(sm$count == 5 && identical(sm$total_minor, "1500") &&
+        identical(sm$min_minor, "100") && identical(sm$max_minor, "500"),
+      "period_summary: count·총액·최소·최대 정확")
+check(identical(sm$mean, "300.00") && identical(sm$median, "300.00") &&
+        identical(sm$sd, "158.11") && identical(sm$p25, "200.00") &&
+        identical(sm$p75, "400.00") && identical(sm$p90, "460.00") &&
+        identical(sm$iqr, "200.00"),
+      "period_summary: 평균·중앙값·표준편차·분위수·IQR 고정 자릿수")
+
+# (3) hampel_anomalies — 국소 스파이크만, 구조적 계열에 거짓양성 0
+base28 <- rep(c(30000, 31000, 30500, 29500, 30800, 30200, 30600), 4)
+check(length(hampel_anomalies(as.character(base28))$indices) == 0,
+      "hampel: 구조적 무주입 계열 거짓양성 0")
+h1 <- base28; h1[15] <- h1[15] + 200000
+check(identical(hampel_anomalies(as.character(h1))$indices, 15L),
+      "hampel: 단일 스파이크 정확 검출(이웃 오검출 0)")
+h2 <- base28; h2[c(10, 22)] <- h2[c(10, 22)] + 200000
+check(all(c(10L, 22L) %in% hampel_anomalies(as.character(h2))$indices),
+      "hampel: 다중 스파이크 재현")
+check(length(hampel_anomalies(as.character(rep(30000, 20)))$indices) == 0,
+      "hampel: 상수 계열 이상치 0(무변동 창 가드)")
+he <- tryCatch(hampel_anomalies(as.character(rep(30000, 6))),
+               error = function(e) conditionMessage(e))
+check(is.character(he) && grepl("최소 7개", he), "hampel: 창 미달(n<2K+1) 계약 거절")
+
+# (4) 단독 실행(stdin/stdout) — summary·hampel·weekly + 결정론(재실행 바이트 동일)
+sj <- function(dates, amounts) paste0(
+  '{"date":[', paste(sprintf('"%s"', dates), collapse = ","),
+  '],"amount_minor":[', paste(sprintf('"%s"', amounts), collapse = ","), ']}')
+wk_amt <- (1:21) * 1000
+reqs9 <- c(
+  paste0('{"kind":"summary","series":',
+         sj(sprintf("2026-01-%02d", 1:5), c(100, 200, 300, 400, 500)), '}'),
+  paste0('{"kind":"hampel","series":', sj(sprintf("d%d", seq_along(h1)), h1), '}'),
+  paste0('{"kind":"weekly","name":"wk","series":',
+         sj(sprintf("2026-02-%02d", 1:21), wk_amt), '}')
+)
+p9 <- write_req(reqs9)
+d9a <- file.path(tempdir(), "svg-t9a"); d9b <- file.path(tempdir(), "svg-t9b")
+r9a <- run_main(p9, d9a); r9b <- run_main(p9, d9b)
+check(r9a$status == 0, "T9 단독 실행 정상 종료")
+check(identical(read_bytes(r9a$stdout), read_bytes(r9b$stdout)),
+      "T9 결정론: 재실행 stdout 바이트 동일")
+o9 <- lapply(readLines(r9a$stdout, warn = FALSE), fromJSON)
+check(identical(o9[[1]]$total_minor, "1500") && identical(o9[[1]]$p90, "460.00"),
+      "summary(stdin): 총액·p90 계약 일치")
+check(identical(o9[[2]]$kind, "hampel") && nrow(o9[[2]]$anomalies) == 1 &&
+        identical(o9[[2]]$anomalies$amount_minor, as.character(h1[15])),
+      "hampel(stdin): 스파이크 1건 정확")
+check(identical(o9[[3]]$kind, "weekly") && length(o9[[3]]$files) == 2 &&
+        identical(o9[[3]]$buckets$total_minor, c("28000", "77000", "126000")),
+      "weekly(stdin): 버킷 합계 정확·SVG 2벌")
+
+# (5) 주간 막대 SVG — 재실행 바이트 동일 + 인라인 색이 전부 디자인 토큰(하드코딩 0)
+for (theme in c("light", "dark")) {
+  f <- sprintf("wk-%s.svg", theme)
+  check(identical(read_bytes(file.path(d9a, f)), read_bytes(file.path(d9b, f))),
+        sprintf("weekly SVG %s: 재실행 바이트 동일(결정론)", theme))
+  tok <- toupper(tokens[[theme]])
+  used <- svg_inline_colors(file.path(d9a, f))
+  check(all(used %in% tok), sprintf("weekly SVG %s: 사용 색 전부 토큰", theme),
+        sprintf("(비토큰 %s)", paste(setdiff(used, tok), collapse = ",")))
+  check(tok[["accent"]] %in% used,
+        sprintf("weekly SVG %s: 막대에 accent 토큰 실사용", theme))
+}
+
 if (fails > 0) {
   cat(sprintf("\ntest-analytics: %d건 실패\n", fails))
   quit(save = "no", status = 1)
