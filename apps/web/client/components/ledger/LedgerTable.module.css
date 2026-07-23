@@ -5,6 +5,12 @@
 .wrap {
   display: flex;
   flex-direction: column;
+  /* flex 를 반드시 명시한다. .tableArea 는 row 방향 flex 컨테이너인데, 여기서
+     기본값 `0 1 auto`(콘텐츠 기반 폭)로 두면 아래 container-type: inline-size 의
+     인라인 축 컨테인먼트가 콘텐츠의 폭 기여를 없애 **폭이 0 으로 붕괴**한다
+     (표 전체가 사라진다 — 실제 브라우저에서만 재현, happy-dom 은 레이아웃을
+     계산하지 않아 단위 테스트로는 잡히지 않았다). */
+  flex: 1;
   min-height: 0;
   min-width: 0;
   background: var(--surface);
