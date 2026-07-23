@@ -31,8 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # CI web 잡과 같은 11 로 고정한다. apps/web/pnpm-workspace.yaml 은 packages 없이
+      # allowBuilds 만 두는 pnpm 10+ 형식이라, 9 로 설치하면 packages 필드를 요구하며 실패한다.
       - uses: pnpm/action-setup@v4
-        with: { version: 9 }
+        with: { version: 11 }
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
