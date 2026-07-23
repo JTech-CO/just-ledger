@@ -250,6 +250,7 @@ jobs:
       - run: cd services/realtime && mix deps.get
       - run: cd services/realtime && mix format --check-formatted
       - run: cd services/realtime && MIX_ENV=test mix compile --warnings-as-errors
+      - run: cd services/realtime && mix credo --strict
       - run: make test-realtime
 
   # ── Rust WASM (인제스트 파서) ────────────────────────────────────────────
