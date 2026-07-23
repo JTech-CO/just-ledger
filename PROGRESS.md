@@ -6,9 +6,22 @@
 
 ## 현재 phase
 
-**M8 — UI 완성 및 접근성 (JavaScript)** (착수 전)
+**M8 — UI 완성 및 접근성 (JavaScript)** (구현 완료, 적대 검증 반영 중)
 
-M0~M7 게이트 통과. **M7(2026-07-23):** 실시간 계층 완성 —
+M0~M7 게이트 통과. **M8(2026-07-23):** UI 계층 완성 —
+- **컴포넌트**(디자인 백서 §2-5, CSS Modules + 토큰 전용): LedgerTable 가상 스크롤(@tanstack/react-virtual), Money(색+부호 병기), 3열 셸(AppShell/Topbar/AccountTree/BalanceSummary), Inspector, FixedWidthReport, ReportChart.
+- **훅**: useLedgerSocket(Phoenix WebSocket 최소 구현·자동 재연결), useLedgerKeyboard(j/k/Enter/e///Esc), useTheme(수동 토글+자동+FOUC 프리페인트).
+- **DoD 실측**:
+  1. **10만행 60fps** — 실 브라우저(vite dev + in-app 브라우저) 측정: DOM 노드 **34개 상수**(가상화), 스크롤 반영 **p50 0.38ms / p95 0.60ms / 최대 7.9ms** (60fps 예산 16.67ms의 4%). sizer 예약 3.4M px. 카드 모드는 measureElement 로 높이 실측.
+  2. 하드코딩 색상 0 (scripts/check-hardcoded-color.mjs, CI 게이트).
+  3. 키보드 완주 — j/k 활성 행이 뷰포트 밖이면 scrollToIndex 로 추종 + aria-activedescendant.
+  4. 대비 WCAG AA(라이트·다크 전 조합, warning·primary 포함) + Money 색+부호 병기.
+  5. 가로 스크롤 0 — **컨테이너 쿼리**(상세 패널 열림으로 표 폭이 좁아져도 반응), 금액 컬럼 미숨김.
+  6. reduced-motion 전역 0ms.
+  7. settled 편집 컨트롤 DOM 미렌더.
+- **적대 검증 4렌즈 18건 → verify 세션한도로 직접 확증 → blocker/major 다수 수정**: 키보드 스크롤-추종 부재(가상화에서 활성 행 소실), 가로 오버플로(Inspector 열림 시 표 폭 부족 → 컨테이너 쿼리), settlement_done 전역 잠금(→ 계약 period 로 기간별 settledPeriods), 태블릿 사이드바 열기 수단 부재(→ 메뉴 버튼+백드롭), 모바일 카드 높이 가상화 어긋남(→ measureElement), App.jsx 헤더 중복, 합계 18자리 초과 조용한 제외(→ BigInt 무제한), FOUC.
+
+**M7(2026-07-23):** 실시간 계층 완성 —
 - **Elixir `services/realtime`**: Phoenix 채널(Ecto 미도입, 채널·소켓만) + PostgreSQL `LISTEN ledger_events` 브리지 + 예산 임계 감시 GenServer + 감독 트리(`:one_for_one`).
 - **테넌트 격리(RLS 부재 경로)**: NOTIFY 페이로드를 `notify-envelope`(owner_id 봉투)로 바꿔 소유자 토픽으로만 라우팅. 채널 가입은 소켓 신원과 토픽 owner_id 정확 일치만 허용. 조회 커넥션은 `SET ROLE ledger_realtime`(BYPASSRLS 없음) + 트랜잭션 내 `set_config(local)`로 RLS 이중 방어.
 - **DoD 실측(통합 37건)**: ① DB→채널 push p95 **9.3ms** ≤ 300ms ② 동시 100 유실 0 ③ 알림 커넥션 kill 후 자가 재연결 + resync 스냅샷 ④ 실 SQL 소진액 80000 발화 + budget_alert_log 멱등(재시작 견고) ⑤ 커넥션 max_connections 대조.
