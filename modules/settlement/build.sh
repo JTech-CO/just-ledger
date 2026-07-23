@@ -7,4 +7,7 @@ mkdir -p bin
 COBC_FLAGS="-x -std=cobol2014 -freserved=NEAREST-EVEN -O2"
 cobc $COBC_FLAGS -o bin/settle settle.cbl
 cobc $COBC_FLAGS -o bin/amort amort.cbl
-echo "settlement build OK (bin/settle, bin/amort)"
+cobc $COBC_FLAGS -o bin/interest interest.cbl
+cobc $COBC_FLAGS -o bin/report report.cbl
+cobc $COBC_FLAGS -o bin/deprec deprec.cbl
+echo "settlement build OK (settle, amort, interest, report, deprec)"
