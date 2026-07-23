@@ -6,9 +6,15 @@
 
 ## 현재 phase
 
-**M7 — 실시간 계층 (Elixir)** (착수 전)
+**M8 — UI 완성 및 접근성 (JavaScript)** (착수 전)
 
-M0~M6 게이트 통과. **M6(2026-07-23):** 분석 계층 완성 —
+M0~M7 게이트 통과. **M7(2026-07-23):** 실시간 계층 완성 —
+- **Elixir `services/realtime`**: Phoenix 채널(Ecto 미도입, 채널·소켓만) + PostgreSQL `LISTEN ledger_events` 브리지 + 예산 임계 감시 GenServer + 감독 트리(`:one_for_one`).
+- **테넌트 격리(RLS 부재 경로)**: NOTIFY 페이로드를 `notify-envelope`(owner_id 봉투)로 바꿔 소유자 토픽으로만 라우팅. 채널 가입은 소켓 신원과 토픽 owner_id 정확 일치만 허용. 조회 커넥션은 `SET ROLE ledger_realtime`(BYPASSRLS 없음) + 트랜잭션 내 `set_config(local)`로 RLS 이중 방어.
+- **DoD 실측(통합 37건)**: ① DB→채널 push p95 **9.3ms** ≤ 300ms ② 동시 100 유실 0 ③ 알림 커넥션 kill 후 자가 재연결 + resync 스냅샷 ④ 실 SQL 소진액 80000 발화 + budget_alert_log 멱등(재시작 견고) ⑤ 커넥션 max_connections 대조.
+- **적대 검증 4렌즈 55건 발견 → verify 세션한도로 직접 코드 확증 → 16건 수정** (blocker: prod secret_key_base 부재로 운영 기동 불가, budget SQL 필터 무력화, RLS set_config 트랜잭션 미묶음, 계약 밖 프레임 SSOT 위반, Listener 늦은 EXIT 오종료).
+
+**M6(2026-07-23):** 분석 계층 완성 —
 - **R `modules/analytics`**: STL(robust) + MAD robust z > 3.5 이상치, 부트스트랩 10,000회 예산 초과확률, 디자인 토큰(tokens.css SSOT) 파싱 → ggplot 테마 → **라이트/다크 SVG 2벌**. `--cache-dir` 캐시(키 = stdin + 토큰 + 모듈 코드).
 - **Julia `modules/simulation`**: 가우시안 KDE 리샘플링 몬테카를로(Xoshiro 명시 시드), 상환 순서 **Int128 전수 순열 최적화**(가지치기 + 사전순 타이브레이크), warmup(JIT 예열), SHA-256 캐시.
 - **DoD 실측**: ① 재실행·CI 양쪽 stdout·SVG 바이트 동일 ② 재현율 1.000 / FPR 0.0000~0.0049 (골든 구성 + 주입 밀도 4종 + 주입0 + 상수계열) ③ 10,000 경로 NaN·발산 0, CI 폭 0.008916 ≤ 0.01 ④ SVG 2벌 + **실제 사용 색 기반** AA ⑤ 캐시 히트·무효화.
@@ -77,12 +83,13 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 
 ## 다음 할 일
 
-1. **M7 착수** (Elixir 단일 언어 세션): `services/realtime` — Phoenix 채널 + PostgreSQL `LISTEN` 브리지 + 예산 임계 감시 GenServer + 감독 트리. 진입조건(M1·M2)은 이미 충족.
-2. 미접속 배선(모듈은 완성, 오케스트레이션은 후속 phase):
+1. **M8 착수** (JavaScript 단일 언어 세션): `apps/web` — tokens.css 확정, LedgerTable 가상 스크롤(10만행 60fps), 마감선, Money, Inspector, FixedWidthReport, ReportChart(R SVG 뷰어), 반응형, 접근성(WCAG 2.1 AA·색각·키보드 완주), `prefers-reduced-motion`. 진입조건(M2~M7)은 충족.
+2. M8 에서 실시간 소켓 클라이언트를 붙일 때: 채널은 `"event"` 메시지 + 계약 객체를 보낸다 → `applyRealtime(evt)`가 `evt.type`(balance_changed·settlement_done·ingest_progress·budget_alert·sync)으로 분기. web 소비자 갱신 필요(budget_alert·sync 처리).
+3. 미접속 배선(모듈은 완성, 오케스트레이션은 후속):
    - 정산: worker 월말 마감 스케줄 → `BuildSettleInput` → COBOL → 결과 DB 반영
    - 분석: 야간 스케줄 → R/Julia 배치 → `report_artifact` 등록·캐시 서빙
    - DSL: eval 요청에 `txn.currency` 전달 (M5 계약 변경 — 소비자 미갱신)
-3. 백서 §2.1/§3.1 버전 표기 개정(docs: 커밋) 미결 유지
+4. 백서 §2.1/§3.1 버전 표기 개정(docs: 커밋) 미결 유지
 
 ---
 
@@ -146,6 +153,9 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | 2026-07-22 | rules-dsl JSONL 프로토콜 (개정 — 적대검증) | eval `txn.currency` **필수화**(리터럴 통화 ≠ txn 통화면 rule 불발 — 환산·근사 없음), 응답에 `skipped_budgets` 추가, `parseMoney` 를 contracts moneyMinor 패턴과 동일 수용 집합으로 | dsl ✔, worker/web(M7+ 소비 시 currency 전달 필요 — 어댑터 계약에 반영 예정) | dsl ✔ / 소비자 대기 |
 | 2026-07-23 | `apps/web/client/styles/tokens.css` (소비자 추가 — 파일 불변) | R 리포트가 SVG 색상을 이 파일에서 **파싱해 쓴다**(하드코딩 hex 0). 토큰 값이 바뀌면 analytics 골든 SVG 가 갈라지므로 CI analytics 잡 필터에 tokens.css 를 포함했고, 캐시 키에도 토큰 해시가 들어간다 | web(변경 불요 — 소유·형태 불변), analytics ✔(파서·AA 테스트) | analytics ✔ |
 | 2026-07-23 | analytics JSONL 프로토콜 (신설), simulation JSONL 프로토콜 (신설) | analytics: `anomaly`/`forecast`/`report` 요청, 확률은 고정 자릿수 **문자열**, 금액은 최소단위 정수 문자열(2^53 초과 거절). simulation: `montecarlo`/`repayment`/`warmup`, 확률·CI 고정 자릿수 문자열, 금액 문자열(통계 경로 2^53 가드 / repayment 는 Int128 로 18자리 수용). 두 모듈 모두 `--cache-dir` 캐시 규약 | analytics ✔, simulation ✔, worker(야간 스케줄 오케스트레이션 미접속) | 모듈 ✔ / worker 대기 |
+| 2026-07-23 | `contracts/notify-envelope.schema.json` (신설) | NOTIFY(`ledger_events`) 페이로드를 `{owner_id, event}` 봉투로 — 실시간 경로엔 RLS 가 없어 owner_id 가 테넌트 격리의 유일한 근거. 브라우저 프레임(`event`)은 notify-event 그대로라 web 무영향 | db ✔(3발행부 봉투화·격리 회귀), realtime ✔(라우팅), web(무영향) | db ✔ / realtime ✔ |
+| 2026-07-23 | `notify-event.schema.json` (개정 — 적대검증) | `budget_alert`(예산 감시 GenServer 생성)·`sync`(채널 join 스냅샷) 프레임 추가 — 채널이 브라우저로 내보내는 모든 프레임이 SSOT 를 따르게. 금액·ratio 문자열 | realtime ✔, web(M8 소켓 클라이언트에서 applyRealtime 소비) | realtime ✔ / web 대기 |
+| 2026-07-23 | `db` 스키마: `budget_alert_log`(신설), `ledger_realtime` 권한 (개정 — M7) | 예산 알림 멱등 발화 기록(PK (budget_id, period_key)) — 감시자 재시작에도 중복 금지(DoD 4). ledger_realtime 에 budget·budget_alert_log 권한 부여(최소권한 롤로 예산 감시 동작). RLS 적용 | db ✔, realtime ✔(claim_alert) | db ✔ / realtime ✔ |
 
 ---
 
@@ -201,6 +211,6 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | M4 추론 | **통과** (분류 97.4%·이체 거짓양성 0/INV-8·정기결제·Lua 샌드박스 — plunit 19+sandbox 그린 + CI 런 29867115754 prolog 잡 그린) | 2026-07-22 |
 | M5 정산 | **통과** (INV-7 차이 0원: 10,000 entry·상각 481행·0.5 경계 400건 삼자 일치, 로컬 3.2.0 + CI 3.1.2 이종 재현 — CI 런 29895860120 settlement·worker 그린. DSL 스펙 유효 20/오류 29/위치 exact. 적대 검증 15건 수정) | 2026-07-22 |
 | M6 분석 | **통과** (DoD 1~5 실측: 바이트 결정론·재현율 1.000/FPR ≤0.0049·NaN 0/CI 0.0089·SVG 2벌 AA·캐시. analytics 58 + simulation 50 그린, CI analytics/simulation 잡 그린. 적대 검증 22건 수정) | 2026-07-23 |
-| M7 실시간 | 대기 | — |
+| M7 실시간 | **통과** (DoD 1~5 실측: DB→채널push p95 9.3ms·동시 100 유실 0·알림 커넥션 kill 후 자가복구+resync·실 SQL 소진액 멱등 발화·max_connections 대조. 통합 37건 그린. 봉투 owner_id 테넌트 격리. 적대 검증 16건 수정) | 2026-07-23 |
 | M8 UI·접근성 | 대기 | — |
 | M9 언어 구성·배포 | 대기 | — |
