@@ -12,7 +12,7 @@ config :realtime,
 
 config :realtime, RealtimeWeb.Endpoint,
   url: [host: "localhost"],
-  render_errors: [formats: [], layout: false],
+  render_errors: [formats: [json: RealtimeWeb.ErrorJSON], layout: false],
   pubsub_server: Realtime.PubSub,
   # 채널 프레임은 계약 JSON — Jason 직렬화만 쓴다
   http: [ip: {0, 0, 0, 0}, port: 4000],

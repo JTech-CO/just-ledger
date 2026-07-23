@@ -34,34 +34,34 @@ defmodule RealtimeWeb.LedgerChannelTest do
              socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "other:x")
   end
 
-  test "가입 직후 스냅샷을 받는다 (재접속 보정 — DoD 3)" do
+  test "가입 직후 sync 스냅샷을 받는다 (재접속 보정 — DoD 3)" do
     {:ok, _, _socket} =
       socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner1}")
 
-    # DB 미연결 환경에서는 빈 목록이지만, sync 프레임 자체는 반드시 온다
-    assert_push("sync", %{"balances" => balances})
+    # 모든 프레임은 "event" 이벤트명 + 계약 객체(type 포함). DB 미연결이면 빈 목록.
+    assert_push("event", %{"type" => "sync", "balances" => balances})
     assert is_list(balances)
   end
 
-  test "내 소유자 이벤트만 푸시된다" do
+  test "내 소유자 이벤트만 푸시되고, 프레임에 type 이 유지된다" do
     {:ok, _, _socket} =
       socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner1}")
 
-    assert_push("sync", %{})
+    assert_push("event", %{"type" => "sync"})
 
     event = %{
       "type" => "balance_changed",
       "row" => %{"account_id" => "a", "currency" => "KRW", "balance_minor" => "5000"}
     }
 
-    # 내 토픽 — 받아야 한다
+    # 내 토픽 — 받아야 한다. web applyRealtime 이 evt.type 으로 분기하므로 type 유지.
     Phoenix.PubSub.broadcast(
       Realtime.PubSub,
       Realtime.Listener.topic(@owner1),
       {:ledger_event, event}
     )
 
-    assert_push("balance_changed", %{"row" => %{"balance_minor" => "5000"}})
+    assert_push("event", %{"type" => "balance_changed", "row" => %{"balance_minor" => "5000"}})
 
     # 남의 토픽 — 오면 안 된다
     Phoenix.PubSub.broadcast(
@@ -70,24 +70,16 @@ defmodule RealtimeWeb.LedgerChannelTest do
       {:ledger_event, event}
     )
 
-    refute_push("balance_changed", %{}, 100)
+    refute_push("event", %{"type" => "balance_changed"}, 100)
   end
 
-  test "푸시 프레임은 type 을 이벤트명으로 쓰고 본문에서 뺀다" do
+  test "리스너 재연결(resync)에 현재 스냅샷을 다시 밀어 넣는다 (DoD 3)" do
     {:ok, _, _socket} =
       socket_for(@owner1) |> subscribe_and_join(RealtimeWeb.LedgerChannel, "ledger:#{@owner1}")
 
-    assert_push("sync", %{})
+    assert_push("event", %{"type" => "sync"})
 
-    Phoenix.PubSub.broadcast(
-      Realtime.PubSub,
-      Realtime.Listener.topic(@owner1),
-      {:ledger_event,
-       %{"type" => "settlement_done", "period" => %{"start" => "2026-05-01", "end" => "2026-05-31"}}}
-    )
-
-    assert_push("settlement_done", payload)
-    assert payload["period"]["start"] == "2026-05-01"
-    refute Map.has_key?(payload, "type")
+    Phoenix.PubSub.broadcast(Realtime.PubSub, "realtime:resync", :resync)
+    assert_push("event", %{"type" => "sync", "balances" => _})
   end
 end

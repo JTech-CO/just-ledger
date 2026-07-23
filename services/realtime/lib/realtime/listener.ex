@@ -27,21 +27,40 @@ defmodule Realtime.Listener do
     end
   end
 
+  @doc """
+  실제 LISTEN 상태 — 프로세스 생존이 아니라 알림 커넥션이 실제로 붙어 있는지.
+  health 체크가 이걸 봐야 브리지가 조용히 끊긴 상태를 감지한다.
+  """
+  def listening? do
+    case Process.whereis(__MODULE__) do
+      nil -> false
+      pid -> match?(%{pid: p} when is_pid(p), :sys.get_state(pid))
+    end
+  catch
+    _, _ -> false
+  end
+
+  # DB 가 발행하는 이벤트 유형(contracts/notify-event.schema.json). budget_alert·
+  # sync 는 realtime 내부에서 생성되므로 봉투로 오지 않는다 — 봉투에 그 type 이
+  # 오면 위조다. 알려진 유형만 통과시켜 임의 프레임이 채널로 새는 것을 막는다.
+  @db_event_types ~w(balance_changed settlement_done ingest_progress)
+
   @doc "소유자별 PubSub 토픽 — 채널과 리스너가 같은 규칙을 쓴다."
   def topic(owner_id) when is_binary(owner_id), do: "user:" <> owner_id
 
   @doc """
   봉투 문자열을 파싱해 `{:ok, owner_id, event}` 또는 `{:error, reason}` 을 준다.
-  라우팅 결정에 쓰이는 순수 함수라 DB 없이 단위 테스트한다.
+  라우팅 결정에 쓰이는 순수 함수라 DB 없이 단위 테스트한다. event.type 이
+  DB 발행 유형 화이트리스트에 없으면 거절한다(위조 프레임 차단).
   """
   @spec parse_envelope(binary()) :: {:ok, binary(), map()} | {:error, atom()}
   def parse_envelope(raw) when is_binary(raw) do
     case Jason.decode(raw) do
-      {:ok, %{"owner_id" => owner, "event" => %{"type" => _} = event}} when is_binary(owner) ->
-        if Regex.match?(@uuid_re, owner) do
-          {:ok, owner, event}
-        else
-          {:error, :bad_owner_id}
+      {:ok, %{"owner_id" => owner, "event" => %{"type" => type} = event}} when is_binary(owner) ->
+        cond do
+          not Regex.match?(@uuid_re, owner) -> {:error, :bad_owner_id}
+          type not in @db_event_types -> {:error, :unknown_event_type}
+          true -> {:ok, owner, event}
         end
 
       {:ok, _} ->
@@ -54,15 +73,19 @@ defmodule Realtime.Listener do
 
   @impl true
   def init(opts) do
-    # Postgrex.Notifications.start_link 는 호출자와 링크를 만든다. 링크를 그대로
-    # 두면 알림 커넥션이 죽을 때 이 리스너도 함께 죽어 감독자 재시작에 의존하게
-    # 된다. EXIT 를 메시지로 받아 **스스로** 재연결한다 (DoD 3).
-    Process.flag(:trap_exit, true)
     channel = Keyword.get(opts, :channel, Application.get_env(:realtime, :listen_channel))
     pubsub = Keyword.get(opts, :pubsub, Realtime.PubSub)
     conn_opts = Keyword.get(opts, :conn_opts) || Realtime.Repo.conn_opts()
 
-    state = %{channel: channel, pubsub: pubsub, conn_opts: conn_opts, pid: nil, ref: nil}
+    state = %{
+      channel: channel,
+      pubsub: pubsub,
+      conn_opts: conn_opts,
+      pid: nil,
+      ref: nil,
+      mref: nil,
+      reconnected: false
+    }
 
     case conn_opts do
       nil ->
@@ -81,16 +104,31 @@ defmodule Realtime.Listener do
   defp connect(state) do
     case Postgrex.Notifications.start_link(state.conn_opts) do
       {:ok, pid} ->
+        # start_link 가 만든 링크를 즉시 끊고 monitor 로만 감시한다. 링크를 두면
+        # 알림 커넥션이 죽을 때 EXIT 가 이 리스너를 함께 죽인다(감독자 재시작 의존).
+        # unlink + monitor 면 DOWN 하나만 받아 **스스로** 재연결한다 (DoD 3) — 늦은
+        # EXIT 로 인한 오종료도 원천 차단된다.
+        Process.unlink(pid)
+        mref = Process.monitor(pid)
         ref = Postgrex.Notifications.listen!(pid, state.channel)
-        Process.monitor(pid)
         Logger.info("Realtime.Listener: LISTEN #{state.channel} 시작")
-        %{state | pid: pid, ref: ref}
+
+        # 재연결이면(이전에 pid 가 있었다가 끊긴 경우) 접속 중이던 채널들에
+        # 재동기화를 요청한다 — 끊긴 창에서 놓친 NOTIFY 를 현재 상태로 수렴시킨다.
+        if state.reconnected, do: request_resync(state.pubsub)
+        %{state | pid: pid, ref: ref, mref: mref, reconnected: true}
 
       {:error, reason} ->
         Logger.error("Realtime.Listener: 연결 실패 #{inspect(reason)} — 1s 후 재시도")
         Process.send_after(self(), :reconnect, 1_000)
-        %{state | pid: nil, ref: nil}
+        %{state | pid: nil, ref: nil, mref: nil}
     end
+  end
+
+  # 재연결 창에서 놓친 이벤트 보정: 접속 중인 모든 채널에 스냅샷 재발행을 알린다.
+  # 채널은 자기 소유자의 현재 잔액을 다시 sync 로 밀어 수렴시킨다 (DoD 3).
+  defp request_resync(pubsub) do
+    Phoenix.PubSub.broadcast(pubsub, "realtime:resync", :resync)
   end
 
   @impl true
@@ -100,35 +138,29 @@ defmodule Realtime.Listener do
   end
 
   # 알림 연결이 죽으면 감독자를 기다리지 않고 스스로 복구한다 (DoD 3).
-  # trap_exit 때문에 {:EXIT, ...} 로 오고, monitor 때문에 {:DOWN, ...} 로도 온다.
-  # 먼저 온 쪽이 pid 를 nil 로 만들므로 나중 것은 아래 패턴에 걸리지 않는다.
-  def handle_info({:DOWN, _ref, :process, pid, reason}, %{pid: pid} = state) do
-    {:noreply, schedule_reconnect(state, reason)}
+  # unlink 했으므로 DOWN 만 온다 — EXIT 로 인한 오종료 경로가 없다.
+  def handle_info({:DOWN, mref, :process, pid, reason}, %{mref: mref, pid: pid} = state) do
+    Logger.warning("Realtime.Listener: 알림 연결 종료 #{inspect(reason)} — 재연결")
+    Process.send_after(self(), :reconnect, 200)
+    {:noreply, %{state | pid: nil, ref: nil, mref: nil}}
   end
-
-  def handle_info({:EXIT, pid, reason}, %{pid: pid} = state) do
-    {:noreply, schedule_reconnect(state, reason)}
-  end
-
-  # 부모(감독자)로부터의 EXIT — trap_exit 을 켰으므로 직접 종료해야 한다
-  def handle_info({:EXIT, _other, reason}, state), do: {:stop, reason, state}
 
   def handle_info(:reconnect, state), do: {:noreply, connect(state)}
   def handle_info(_other, state), do: {:noreply, state}
 
-  defp schedule_reconnect(state, reason) do
-    Logger.warning("Realtime.Listener: 알림 연결 종료 #{inspect(reason)} — 재연결")
-    Process.send_after(self(), :reconnect, 200)
-    %{state | pid: nil, ref: nil}
-  end
+  @doc "예산 감시자가 balance_changed 를 받는 내부 토픽 (owner 무관 단일 구독)"
+  def watch_topic, do: "budget:watch"
 
   @doc false
   def dispatch(payload, pubsub) do
     case parse_envelope(payload) do
       {:ok, owner, event} ->
-        # 소유자 토픽으로만 발행 — 전역 브로드캐스트 폴백은 두지 않는다
+        # 소유자 토픽으로만 발행 — 전역 브로드캐스트 폴백은 두지 않는다.
         Phoenix.PubSub.broadcast(pubsub, topic(owner), {:ledger_event, event})
-        Realtime.BudgetWatcher.observe(owner, event)
+
+        # 예산 감시는 같은 pubsub 의 내부 토픽으로 넘긴다. 감시자를 직접 호출하지
+        # 않으므로 이 pubsub 을 쓰는 인스턴스에만 닿아 테스트 격리가 유지된다.
+        Phoenix.PubSub.broadcast(pubsub, watch_topic(), {:observe, owner, event})
         :ok
 
       {:error, reason} ->

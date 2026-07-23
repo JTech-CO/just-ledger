@@ -55,6 +55,14 @@ defmodule Realtime.ListenerTest do
       legacy = Jason.encode!(balance_event())
       assert {:error, :bad_envelope} = Listener.parse_envelope(legacy)
     end
+
+    test "DB 발행 유형 화이트리스트 밖 type 은 거절한다 (위조 프레임 차단)" do
+      # budget_alert·sync 는 realtime 내부 생성 — 봉투로 오면 위조다
+      for t <- ["budget_alert", "sync", "arbitrary", "delete_everything"] do
+        ev = %{"type" => t}
+        assert {:error, :unknown_event_type} = Listener.parse_envelope(envelope(@owner1, ev))
+      end
+    end
   end
 
   describe "dispatch/2 — 소유자 격리" do

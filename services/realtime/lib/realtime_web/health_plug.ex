@@ -8,11 +8,16 @@ defmodule RealtimeWeb.HealthPlug do
   def init(opts), do: opts
 
   def call(%Plug.Conn{path_info: ["health"]} = conn, _opts) do
-    listening = Process.whereis(Realtime.Listener) != nil
+    # 프로세스 생존이 아니라 실제 LISTEN 연결 상태를 본다. DATABASE_URL 미설정
+    # 환경(채널 단독)에서는 브리지가 없는 게 정상이므로 degraded 로 구분한다.
+    bridge_expected = Realtime.Repo.conn_opts() != nil
+    listening = Realtime.Listener.listening?()
+    ok = not bridge_expected or listening
+    status = if ok, do: 200, else: 503
 
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(200, Jason.encode!(%{"ok" => true, "listener" => listening}))
+    |> send_resp(status, Jason.encode!(%{"ok" => ok, "listening" => listening}))
     |> halt()
   end
 
