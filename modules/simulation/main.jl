@@ -1,5 +1,8 @@
 # modules/simulation/main.jl — Julia 시뮬레이션 모듈 (M6, 기술 백서 §4.3)
 #
+# 요청 kind: montecarlo(현금흐름 소진 확률·분위수), scenario(낙관/기준/비관 비교),
+#   sensitivity(한 파라미터 격자 훑기), repayment(상환 순서 전수 최적화), warmup(JIT 예열).
+#
 # 프로토콜: JSONL stdin → JSONL stdout, 라인 1:1 대응.
 #   잘못된 줄은 {"ok":false,"error":"..."} 한 줄로 응답하고 다음 줄을 계속 처리한다.
 #   출력에 타임스탬프·비결정 값 금지. 확률·실수 값은 고정 자릿수 "문자열"로만
@@ -69,12 +72,17 @@ err_json(msg::AbstractString) = JSON3.write((ok = false, error = String(msg)))
 
 # ── montecarlo — 가우시안 KDE 리샘플링 몬테카를로 (백서 §4.3) ────────────────
 
-# 분위수 type=1 상당: 보간 없이 표본값 자체를 선택한다. pct 는 정수 퍼센트(5, 25, …) —
-# p*n 의 부동소수점 경계 오차를 피하려고 인덱스를 정수 산술(cld)로 만든다.
-function quantile_type1(sorted::Vector{Float64}, pct::Int)::Float64
-    n = length(sorted)
-    return sorted[clamp(cld(pct * n, 100), 1, n)]
-end
+# 분위수 인덱스(type=1): 보간 없이 정수 인덱스를 정수 산술(cld)로 만든다 —
+# p*n 의 부동소수점 경계 오차를 피한다. pct 는 정수 퍼센트(5, 25, …).
+quantile_type1_idx(n::Int, pct::Int)::Int = clamp(cld(pct * n, 100), 1, n)
+
+# 분위수 type=1 상당: 보간 없이 표본값 자체를 선택한다.
+quantile_type1(sorted::Vector{Float64}, pct::Int)::Float64 =
+    sorted[quantile_type1_idx(length(sorted), pct)]
+
+# 정수 벡터판 분위수(runway 월 등 정수 통계용). 표본값을 그대로 선택.
+quantile_type1(sorted::Vector{Int}, pct::Int)::Int =
+    sorted[quantile_type1_idx(length(sorted), pct)]
 
 # 표시용 정수 환원(floor).
 # 주의: 이 값은 몬테카를로 '추정치'의 표시 규약일 뿐 원장 금액이 아니다.
@@ -87,11 +95,19 @@ function floor_display_minor(x::Float64)::Int64
     return Int64(f)
 end
 
-function run_montecarlo(seed::Int64, iterations::Int64, horizon::Int64,
+# 몬테카를로 경로 시뮬레이션의 공통 핵심. montecarlo·scenario·sensitivity 가 모두
+# 이 함수 하나를 재사용한다 (중복 금지).
+# 반환:
+#   finals    각 경로의 기말 잔액(Float64, 미정렬)
+#   first_hit 각 경로가 처음 소진(잔액<0)된 월. 초기부터 음수면 0, 끝까지 소진 없으면 -1.
+#   depleted  소진(first_hit != -1) 경로 수
+function simulate_paths(seed::Int64, iterations::Int64, horizon::Int64,
                         initial::Int64, hist::Vector{Float64})
     n = length(hist)
     # 가우시안 KDE 샘플링 직접 구현: 관측치 리샘플 + 대역폭 노이즈.
-    # 실버만 대역폭 bw = 0.9 · min(sd, IQR/1.34) · n^(-1/5)
+    # 실버만 대역폭 bw = 0.9 · min(sd, IQR/1.34) · n^(-1/5).
+    # 대역폭은 이력에 상수를 더해도(시나리오/민감도의 delta) 불변이다 — 분산 기반이라
+    # 위치 이동에 불변이므로, 공통 난수 하에서 delta 격자를 따라 단조성이 보장된다.
     spread = min(std(hist), iqr(hist) / 1.34)
     bw = 0.9 * spread * Float64(n)^(-0.2)
     isfinite(bw) || throw(SimError("발산"))
@@ -99,54 +115,82 @@ function run_montecarlo(seed::Int64, iterations::Int64, horizon::Int64,
     rng = Xoshiro(seed)            # 전역 RNG 금지 — 결정론 (M6 DoD 1)
     init = Float64(initial)
     finals = Vector{Float64}(undef, iterations)
+    first_hit = Vector{Int}(undef, iterations)
     depleted = 0
     finite_ok = true
     for i in 1:iterations
         bal = init
-        hit = bal < 0.0
-        for _ in 1:horizon
+        hitmonth = bal < 0.0 ? 0 : -1
+        for m in 1:horizon
             net = rand(rng, hist) + bw * randn(rng)
             bal += net
             finite_ok &= isfinite(bal)
-            hit |= bal < 0.0
+            if hitmonth == -1 && bal < 0.0
+                hitmonth = m
+            end
         end
         finals[i] = bal
-        depleted += hit ? 1 : 0
+        first_hit[i] = hitmonth
+        depleted += hitmonth == -1 ? 0 : 1
     end
     # 모든 경로 값 isfinite 검증 — 하나라도 NaN/Inf 면 거절 (M6 DoD 3)
     finite_ok || throw(SimError("발산"))
+    return (finals, first_hit, depleted)
+end
 
+# 소진 확률 p 와 95% 신뢰구간 반폭을 고정 자릿수 문자열로 (Float 직렬화 편차 차단).
+depletion_prob_str(depleted::Int, iterations::Int64) = @sprintf("%.4f", depleted / iterations)
+function ci95_str(depleted::Int, iterations::Int64)
     p = depleted / iterations
-    ci = 1.96 * sqrt(p * (1.0 - p) / iterations)
+    return @sprintf("%.6f", 1.96 * sqrt(p * (1.0 - p) / iterations))
+end
+
+# 정렬된 기말 잔액에서 5·25·50·75·95 분위수를 표시 정수 문자열로.
+function quantile_block(finals::Vector{Float64})
     sort!(finals)
-    quants = (
+    return (
         p05 = string(floor_display_minor(quantile_type1(finals, 5))),
         p25 = string(floor_display_minor(quantile_type1(finals, 25))),
         p50 = string(floor_display_minor(quantile_type1(finals, 50))),
         p75 = string(floor_display_minor(quantile_type1(finals, 75))),
         p95 = string(floor_display_minor(quantile_type1(finals, 95))),
     )
-    # 확률·실수는 고정 자릿수 문자열로만 — Float 직렬화 편차 차단
-    return (@sprintf("%.4f", p), @sprintf("%.6f", ci), quants)
 end
 
-function handle_montecarlo(obj)::String
-    seed = req_int(obj, :seed, 0, typemax(Int64))   # seed 없으면 "seed 누락" 오류
+function run_montecarlo(seed::Int64, iterations::Int64, horizon::Int64,
+                        initial::Int64, hist::Vector{Float64})
+    finals, _first_hit, depleted = simulate_paths(seed, iterations, horizon, initial, hist)
+    return (depletion_prob_str(depleted, iterations), ci95_str(depleted, iterations),
+            quantile_block(finals))
+end
+
+# 월 순현금흐름 이력을 정수(최소단위)로 파싱·검증한다. 금액은 정수로 유지하고
+# 2^53 통계 가드를 통과시킨다 — Float64 변환은 통계 경로에 들어갈 때만 한다.
+function parse_history_int(hist_raw)::Vector{Int64}
+    hist_raw isa AbstractVector || throw(SimError("monthly_net_minor_history 는 배열이어야 함"))
+    length(hist_raw) >= 6 || throw(SimError("monthly_net_minor_history 는 6개 이상 필요"))
+    return Int64[check_stat_range(
+                     parse_money(x, "monthly_net_minor_history[]"; allow_negative = true),
+                     "monthly_net_minor_history[]")
+                 for x in hist_raw]
+end
+
+# montecarlo·scenario·sensitivity 가 공유하는 공통 파라미터 파싱 (중복 금지).
+# 검증 순서: seed → iterations → horizon → initial → history.
+function parse_mc_common(obj)
+    seed = req_int(obj, :seed, 0, typemax(Int64))   # seed 없으면 "seed 누락" 오류 (결정론 필수)
     iterations = haskey(obj, :iterations) ? req_int(obj, :iterations, 1, 1_000_000) : Int64(10_000)
     horizon = req_int(obj, :horizon_months, 1, 120)
     initial = check_stat_range(
         parse_money(req_field(obj, :initial_balance_minor), "initial_balance_minor";
                     allow_negative = true), "initial_balance_minor")
-    hist_raw = req_field(obj, :monthly_net_minor_history)
-    hist_raw isa AbstractVector || throw(SimError("monthly_net_minor_history 는 배열이어야 함"))
-    length(hist_raw) >= 6 || throw(SimError("monthly_net_minor_history 는 6개 이상 필요"))
-    # 금액 문자열 → 정수 검증 → 통계 내부에서만 Float64 사용
-    hist = Float64[Float64(check_stat_range(
-                       parse_money(x, "monthly_net_minor_history[]"; allow_negative = true),
-                       "monthly_net_minor_history[]"))
-                   for x in hist_raw]
+    hist_int = parse_history_int(req_field(obj, :monthly_net_minor_history))
+    return (seed, iterations, horizon, initial, hist_int)
+end
 
-    dp, ci, quants = run_montecarlo(seed, iterations, horizon, initial, hist)
+function handle_montecarlo(obj)::String
+    seed, iterations, horizon, initial, hist_int = parse_mc_common(obj)
+    dp, ci, quants = run_montecarlo(seed, iterations, horizon, initial, Float64.(hist_int))
     return JSON3.write((
         ok = true,
         kind = "montecarlo",
@@ -155,6 +199,142 @@ function handle_montecarlo(obj)::String
         final_balance_quantiles = quants,
         iterations = iterations,
         horizon_months = horizon,
+    ))
+end
+
+# ── scenario / sensitivity — montecarlo 핵심 재사용 (백서 §4.3) ───────────────
+
+# 정수 월 순현금흐름 이력에 (배수 num/den, 가산 delta) 조정을 정수 산술로 적용한다.
+# 곱한 뒤 더하며, 나눗셈은 fld — 이는 시뮬레이션 입력 변환의 표시 규약일 뿐 원장
+# 금액이 아니다(원장 반올림 정본은 COBOL NEAREST-EVEN 하나, 이 모듈은 원장 금액을
+# 만들지 않는다). 중간 곱은 Int128 로 오버플로를 피하고, 결과는 2^53 가드로 거른다.
+function adjust_history(hist_int::Vector{Int64}, mult_num::Int64, mult_den::Int64,
+                        delta::Int64)::Vector{Float64}
+    lim = Int128(MAX_EXACT_FLOAT)
+    out = Vector{Float64}(undef, length(hist_int))
+    for (i, h) in enumerate(hist_int)
+        scaled = fld(Int128(h) * Int128(mult_num), Int128(mult_den)) + Int128(delta)
+        -lim <= scaled <= lim ||
+            throw(SimError("조정된 월 순현금흐름이 2^53 을 초과했습니다"))
+        out[i] = Float64(scaled)
+    end
+    return out
+end
+
+# 한 가정(조정된 이력) 하의 몬테카를로 요약: 소진 확률·CI·분위수·중앙 runway.
+# runway = 소진 경로의 '소진까지 걸린 월'의 중앙값(정수). 소진 0건이면 nothing → null.
+function scenario_stats(seed::Int64, iterations::Int64, horizon::Int64,
+                        initial::Int64, hist::Vector{Float64})
+    finals, first_hit, depleted = simulate_paths(seed, iterations, horizon, initial, hist)
+    runway = if depleted == 0
+        nothing
+    else
+        hits = sort!(Int[h for h in first_hit if h != -1])
+        string(quantile_type1(hits, 50))
+    end
+    return (depletion_prob_str(depleted, iterations), ci95_str(depleted, iterations),
+            quantile_block(finals), runway)
+end
+
+# 낙관/기준/비관 등 여러 가정 하에서 몬테카를로를 각각 돌려 비교한다.
+# 모든 시나리오가 같은 seed 로 같은 난수열을 소비한다(공통 난수, common random
+# numbers) — 시나리오 간 '차이'의 분산을 줄여 비교를 공정하게 만드는 표준 기법.
+function handle_scenario(obj)::String
+    seed, iterations, horizon, initial, hist_int = parse_mc_common(obj)
+    scen_raw = req_field(obj, :scenarios)
+    scen_raw isa AbstractVector || throw(SimError("scenarios 는 배열이어야 함"))
+    1 <= length(scen_raw) <= 8 || throw(SimError("scenarios 는 1..8개여야 함"))
+
+    labels = String[]
+    results = NamedTuple[]
+    for s in scen_raw
+        s isa JSON3.Object || throw(SimError("scenarios[] 는 객체여야 함"))
+        label = req_field(s, :label)
+        (label isa AbstractString && !isempty(label) && length(label) <= 64) ||
+            throw(SimError("scenarios[].label 형식 오류"))
+        String(label) in labels && throw(SimError("scenarios[].label 중복"))
+        push!(labels, String(label))
+        mult_num = haskey(s, :net_mult_num) ? req_int(s, :net_mult_num, 0, 1_000_000) : Int64(1)
+        mult_den = haskey(s, :net_mult_den) ? req_int(s, :net_mult_den, 1, 1_000_000) : Int64(1)
+        delta = haskey(s, :net_delta_minor) ?
+            check_stat_range(parse_money(req_field(s, :net_delta_minor),
+                             "scenarios[].net_delta_minor"; allow_negative = true),
+                             "scenarios[].net_delta_minor") : Int64(0)
+        adj = adjust_history(hist_int, mult_num, mult_den, delta)
+        dp, ci, quants, runway = scenario_stats(seed, iterations, horizon, initial, adj)
+        push!(results, (
+            label = String(label),
+            depletion_probability = dp,
+            ci95_halfwidth = ci,
+            median_runway_months = runway,
+            final_balance_quantiles = quants,
+        ))
+    end
+    return JSON3.write((
+        ok = true,
+        kind = "scenario",
+        iterations = iterations,
+        horizon_months = horizon,
+        scenarios = results,
+    ))
+end
+
+# 한 파라미터를 정수 격자로 훑으며 결과가 어떻게 변하는지 본다.
+# 현재 지원: "monthly_net_delta_minor" — 월 순현금흐름에 일정액을 가감했을 때의
+# 소진 확률·중앙 기말잔액. 공통 난수라 delta 가 커질수록 소진 확률은 단조 비증가한다.
+# target_probability(선택) 지정 시, 표시 소진 확률이 목표 이하로 처음 떨어지는 격자
+# 값을 threshold 로 보고한다("소진 위험을 목표 이하로 낮추려면 월 얼마가 필요한가").
+function handle_sensitivity(obj)::String
+    seed, iterations, horizon, initial, hist_int = parse_mc_common(obj)
+    sweep = req_field(obj, :sweep)
+    sweep isa JSON3.Object || throw(SimError("sweep 는 객체여야 함"))
+    param = req_field(sweep, :param)
+    param == "monthly_net_delta_minor" ||
+        throw(SimError("지원하지 않는 sweep.param (monthly_net_delta_minor 만)"))
+    start = check_stat_range(parse_money(req_field(sweep, :start_minor), "sweep.start_minor";
+                                         allow_negative = true), "sweep.start_minor")
+    stop = check_stat_range(parse_money(req_field(sweep, :stop_minor), "sweep.stop_minor";
+                                        allow_negative = true), "sweep.stop_minor")
+    start < stop || throw(SimError("sweep.start_minor 는 stop_minor 보다 작아야 함"))
+    steps = req_int(sweep, :steps, 2, 64)
+
+    target = nothing
+    if haskey(obj, :target_probability)
+        tp = req_field(obj, :target_probability)
+        (tp isa AbstractString && occursin(r"^[01]\.[0-9]{4}$", tp)) ||
+            throw(SimError("target_probability 는 0.0000..1.0000 고정 4자리 문자열이어야 함"))
+        target = parse(Float64, tp)
+    end
+
+    span = Int128(stop) - Int128(start)
+    grid = NamedTuple[]
+    threshold = nothing
+    for i in 0:(steps - 1)
+        # 정수 격자: value_i = start + fld(span·i, steps-1). 양 끝점은 정확히 start·stop.
+        value = start + Int64(fld(span * Int128(i), Int128(steps - 1)))
+        adj = adjust_history(hist_int, Int64(1), Int64(1), value)
+        finals, _first_hit, depleted = simulate_paths(seed, iterations, horizon, initial, adj)
+        dp = depletion_prob_str(depleted, iterations)
+        sort!(finals)
+        p50 = string(floor_display_minor(quantile_type1(finals, 50)))
+        push!(grid, (
+            value_minor = string(value),
+            depletion_probability = dp,
+            final_balance_p50_minor = p50,
+        ))
+        # 표시값(반올림된 dp)을 기준으로 threshold 를 잡아 보고 수치와 일관되게 한다.
+        if target !== nothing && threshold === nothing && parse(Float64, dp) <= target
+            threshold = string(value)
+        end
+    end
+    return JSON3.write((
+        ok = true,
+        kind = "sensitivity",
+        param = param,
+        iterations = iterations,
+        horizon_months = horizon,
+        grid = grid,
+        threshold_value_minor = threshold,
     ))
 end
 
@@ -313,9 +493,12 @@ end
 
 function handle_warmup()::String
     # 실제 핸들러와 동일한 코드 경로를 소형 입력으로 실행해 JIT 를 예열하고 결과는 버린다.
-    hist = Float64[120000, -80000, 150000, -40000, 90000, -60000,
+    hist_i = Int64[120000, -80000, 150000, -40000, 90000, -60000,
                    200000, -110000, 70000, -30000, 130000, -50000]
-    run_montecarlo(Int64(1), Int64(100), Int64(12), Int64(1_000_000), hist)
+    run_montecarlo(Int64(1), Int64(100), Int64(12), Int64(1_000_000), Float64.(hist_i))
+    # scenario·sensitivity 경로(adjust_history·scenario_stats·simulate_paths)도 예열한다.
+    scenario_stats(Int64(1), Int64(100), Int64(12), Int64(1_000_000),
+                   adjust_history(hist_i, Int64(11), Int64(10), Int64(5000)))
     optimize_repayment(["w1", "w2"],
                        Int128[100000, 50000], Int128[1, 2], Int128[100, 100],
                        Int128[10000, 5000], Int128(90000))
@@ -336,6 +519,10 @@ function handle_line(line::AbstractString)::String
         kind === nothing && throw(SimError("kind 누락"))
         if kind == "montecarlo"
             handle_montecarlo(obj)
+        elseif kind == "scenario"
+            handle_scenario(obj)
+        elseif kind == "sensitivity"
+            handle_sensitivity(obj)
         elseif kind == "repayment"
             handle_repayment(obj)
         elseif kind == "warmup"

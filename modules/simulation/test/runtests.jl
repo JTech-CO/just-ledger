@@ -1,7 +1,9 @@
 # make test-simulation — M6 게이트 (Julia).
 # T1 결정론(재실행 바이트 동일, DoD 1)  T2 골든 왕복
 # T3 몬테카를로 NaN·발산 0 + CI 폭 (DoD 3)  T4 상환 최적화 정확성
-# T5 캐시 (DoD 5)  T6 오류 계약  T7 프로토콜 형상
+# T5 캐시 (DoD 5)  T6 오류 계약  T7 프로토콜 형상  T8 통계 경로 정밀도
+# T9 scenario(가정별 비교·공통 난수·base=montecarlo 불변식)
+# T10 sensitivity(격자 단조성·정확 선형·threshold)  T11 scenario·sensitivity 오류 계약
 #
 # main.jl 은 실행 스크립트이므로 include 하지 않고 서브프로세스로 돌린다 —
 # 실제 사용자가 보는 stdin/stdout 경계 그대로를 검증한다.
@@ -162,5 +164,100 @@ end
         bytes, _ = run_main(p)
         rm(p; force = true)
         @test JSON3.read(String(bytes)).ok === true
+    end
+
+    HIST = """["120000","-80000","150000","-40000","90000","-60000","200000","-110000","70000","-30000","130000","-50000"]"""
+
+    @testset "T9 scenario — 가정별 비교 (공통 난수)" begin
+        req = """{"kind":"scenario","seed":424242,"iterations":4000,"horizon_months":18,"initial_balance_minor":"2000000","monthly_net_minor_history":$HIST,"scenarios":[{"label":"opt","net_mult_num":11,"net_mult_den":10,"net_delta_minor":"60000"},{"label":"base"},{"label":"pess","net_mult_num":9,"net_mult_den":10,"net_delta_minor":"-120000"}]}"""
+        r = ask(req)
+        @test r.ok === true
+        @test length(r.scenarios) == 3
+        @test [s.label for s in r.scenarios] == ["opt", "base", "pess"]
+        for s in r.scenarios
+            # 확률·CI 는 고정 자릿수 문자열 (Float 직렬화 편차 차단)
+            @test occursin(r"^[01]\.[0-9]{4}$", s.depletion_probability)
+            @test occursin(r"^[01]\.[0-9]{6}$", s.ci95_halfwidth)
+            qs = [s.final_balance_quantiles[k] for k in (:p05, :p25, :p50, :p75, :p95)]
+            @test all(q -> occursin(r"^-?[0-9]+$", q), qs)
+            @test issorted(parse.(Int64, qs))                # 분위수 단조 비감소
+            # runway 는 null(소진 0건) 또는 1..horizon 정수 문자열
+            @test s.median_runway_months === nothing ||
+                  (occursin(r"^[0-9]+$", s.median_runway_months) &&
+                   1 <= parse(Int, s.median_runway_months) <= 18)
+        end
+        p50s = [parse(Int64, s.final_balance_quantiles.p50) for s in r.scenarios]
+        dps  = [parse(Float64, s.depletion_probability) for s in r.scenarios]
+        # 낙관 > 기준 > 비관 (기말잔액 중앙값), 소진확률은 역방향 단조 비감소
+        @test p50s[1] > p50s[2] > p50s[3]
+        @test dps[1] <= dps[2] <= dps[3]
+        # 결정론: 재실행 완전 동일
+        @test ask(req).scenarios[3].final_balance_quantiles.p50 ==
+              r.scenarios[3].final_balance_quantiles.p50
+        # 항등 조정(base = 배수 1/1·delta 0)은 같은 파라미터 montecarlo 와 바이트 일치해야 한다
+        # — scenario 가 montecarlo 핵심(simulate_paths)을 그대로 재사용함을 못박는다.
+        mc = ask("""{"kind":"montecarlo","seed":424242,"iterations":4000,"horizon_months":18,"initial_balance_minor":"2000000","monthly_net_minor_history":$HIST}""")
+        base = r.scenarios[2]
+        @test base.depletion_probability == mc.depletion_probability
+        @test base.ci95_halfwidth == mc.ci95_halfwidth
+        for k in (:p05, :p25, :p50, :p75, :p95)
+            @test base.final_balance_quantiles[k] == mc.final_balance_quantiles[k]
+        end
+    end
+
+    @testset "T10 sensitivity — 파라미터 격자 + threshold" begin
+        req = """{"kind":"sensitivity","seed":20260722,"iterations":3000,"horizon_months":12,"initial_balance_minor":"500000","monthly_net_minor_history":$HIST,"sweep":{"param":"monthly_net_delta_minor","start_minor":"-120000","stop_minor":"120000","steps":5},"target_probability":"0.1000"}"""
+        r = ask(req)
+        @test r.ok === true
+        @test r.param == "monthly_net_delta_minor"
+        @test length(r.grid) == 5
+        vals = [parse(Int64, g.value_minor) for g in r.grid]
+        # 격자 양 끝점 정확, 등간격, 홀수 steps 중앙은 정확히 0
+        @test vals[1] == -120000
+        @test vals[end] == 120000
+        @test vals[3] == 0
+        @test all(diff(vals) .== 60000)                      # 240000/4
+        dps  = [parse(Float64, g.depletion_probability) for g in r.grid]
+        p50s = [parse(Int64, g.final_balance_p50_minor) for g in r.grid]
+        # 공통 난수: delta↑ → 소진확률 단조 비증가, 중앙 기말잔액 단조 비감소
+        @test issorted(dps; rev = true)
+        @test issorted(p50s)
+        # 정확 선형: 인접 격자 p50 차이 = horizon × delta_step (floor(x+정수)=floor(x)+정수).
+        # 대역폭이 위치 이동 불변이고 공통 난수라서 정확히 성립한다.
+        @test all(diff(p50s) .== 12 * 60000)
+        # 중앙 격자(delta=0)는 같은 파라미터 montecarlo 와 바이트 일치
+        mc = ask("""{"kind":"montecarlo","seed":20260722,"iterations":3000,"horizon_months":12,"initial_balance_minor":"500000","monthly_net_minor_history":$HIST}""")
+        @test r.grid[3].final_balance_p50_minor == mc.final_balance_quantiles.p50
+        @test r.grid[3].depletion_probability == mc.depletion_probability
+        # threshold: 표시 소진확률이 목표(0.1000) 이하로 처음 떨어지는 격자 값
+        @test r.threshold_value_minor !== nothing
+        ti = findfirst(==(parse(Int64, r.threshold_value_minor)), vals)
+        @test dps[ti] <= 0.1000
+        @test ti == 1 || dps[ti - 1] > 0.1000                # 바로 앞 격자는 목표 초과
+        # target 미지정 → threshold null
+        r2 = ask("""{"kind":"sensitivity","seed":20260722,"iterations":3000,"horizon_months":12,"initial_balance_minor":"500000","monthly_net_minor_history":$HIST,"sweep":{"param":"monthly_net_delta_minor","start_minor":"-120000","stop_minor":"120000","steps":5}}""")
+        @test r2.threshold_value_minor === nothing
+    end
+
+    @testset "T11 scenario·sensitivity 오류 계약" begin
+        h = """["1","2","3","4","5","6"]"""
+        scen(body) = ask("""{"kind":"scenario","seed":1,"iterations":50,"horizon_months":6,"initial_balance_minor":"0","monthly_net_minor_history":$h,"scenarios":$body}""")
+        sens(tail) = ask("""{"kind":"sensitivity","seed":1,"iterations":50,"horizon_months":6,"initial_balance_minor":"0","monthly_net_minor_history":$h,"sweep":$tail}""")
+        # scenario: 라벨 중복 / 라벨 누락 / 9개(>8) / net_mult_den 0
+        @test scen("""[{"label":"a"},{"label":"a"}]""").ok === false
+        @test scen("""[{"net_delta_minor":"0"}]""").ok === false
+        nine = join(["""{"label":"s$i"}""" for i in 1:9], ",")
+        @test scen("[$nine]").ok === false
+        @test scen("""[{"label":"a","net_mult_den":0}]""").ok === false
+        # scenario: seed 누락(결정론 필수)
+        @test ask("""{"kind":"scenario","iterations":50,"horizon_months":6,"initial_balance_minor":"0","monthly_net_minor_history":$h,"scenarios":[{"label":"a"}]}""").ok === false
+        # scenario: 조정 결과가 2^53 초과 → 거절 (통계 경로 정밀도 가드)
+        @test ask("""{"kind":"scenario","seed":1,"iterations":50,"horizon_months":6,"initial_balance_minor":"0","monthly_net_minor_history":["9007199254740000","1","2","3","4","5"],"scenarios":[{"label":"a","net_delta_minor":"1000000"}]}""").ok === false
+        # sensitivity: 미지원 param / start>=stop / steps<2
+        @test sens("""{"param":"interest","start_minor":"0","stop_minor":"100","steps":3}""").ok === false
+        @test sens("""{"param":"monthly_net_delta_minor","start_minor":"100","stop_minor":"100","steps":3}""").ok === false
+        @test sens("""{"param":"monthly_net_delta_minor","start_minor":"-100","stop_minor":"100","steps":1}""").ok === false
+        # sensitivity: target_probability 형식 오류(고정 4자리 문자열 아님)
+        @test ask("""{"kind":"sensitivity","seed":1,"iterations":50,"horizon_months":6,"initial_balance_minor":"0","monthly_net_minor_history":$h,"sweep":{"param":"monthly_net_delta_minor","start_minor":"-100","stop_minor":"100","steps":3},"target_probability":"0.5"}""").ok === false
     end
 end
