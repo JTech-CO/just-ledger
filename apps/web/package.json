@@ -11,6 +11,7 @@
     "dev:client": "vite",
     "gen:types": "node scripts/gen-typedefs.mjs",
     "build": "node scripts/gen-typedefs.mjs && vite build",
+    "build:demo": "vite build --mode demo",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,jsx,mjs,css,json}\" --log-level warn",
     "test:api": "vitest run tests/api.test.js tests/ingest.test.js",

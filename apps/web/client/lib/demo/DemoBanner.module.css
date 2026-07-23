@@ -1,0 +1,58 @@
+/* 데모 고지 배너. 색은 전부 토큰 — 하드코딩 hex 없음 (디자인 백서 §5.3). */
+
+/* 배너 + 앱을 한 화면에 담는다. AppShell 은 자체적으로 height:100dvh 라
+   그대로 두면 배너 높이만큼 페이지가 넘쳐 바깥 스크롤바가 생긴다 —
+   앱 슬롯 안에서는 100% 로 낮춘다(데모 셸 한정). */
+.demoRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.appSlot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.appSlot > * {
+  flex: 1;
+  height: 100% !important;
+  min-height: 0;
+}
+
+.banner {
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.line {
+  margin: 0 0 var(--sp-1);
+  max-width: 90ch;
+  color: var(--text-muted);
+}
+
+.line strong {
+  color: var(--text);
+}
+
+.link {
+  color: var(--accent);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+}
+
+.rowsLabel {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
