@@ -398,12 +398,11 @@ jobs:
       - run: lua5.4 scripts/tests/linguist-gate.test.lua
 
   # ── 언어 구성 게이트 (M9 DoD). ────────────────────────────────────────────
-  # 게이트 로직은 완전히 강제되지만, M0~M8 동안은 계측 언어가 점증적으로 채워지므로
-  # 정당하게 실패한다(예: M0 에는 Lua 만 존재). 따라서 M9 전까지는 non-blocking(정보용).
-  # M9 에서 continue-on-error 를 제거해 강제 게이트로 전환한다(M9 DoD 4 음성 테스트 전제).
+  # 게이트 로직은 완전히 강제된다. M9 에서 계측 11개 언어가 각 ≥5%·메인 ≤35% 를
+  # 실제 기능으로 달성했으므로 강제 게이트(blocking)로 전환한다.
+  # 위반(하한 미만·미허용 언어·메인 초과·언어 누락)은 CI 를 실패시킨다(M9 DoD 4).
   linguist:
     runs-on: ubuntu-latest
-    continue-on-error: true   # TODO(M9): 제거 — 언어 구성 게이트를 강제로 전환
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
