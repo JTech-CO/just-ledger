@@ -6,10 +6,25 @@
 
 ## 현재 phase
 
-**M9 — 언어 구성 게이트 및 배포** (착수 전)
+**M0~M9 전 phase 통과 — 프로젝트 골격 완성.** (2026-07-24)
 
-**M8(2026-07-23) 통과.** 남은 후속(M8 범위 밖, M9/오케스트레이션에서 접속):
-- 마감(settlement) **실행** 컨트롤 — 마감 UI 버튼은 worker 오케스트레이션(월말 마감 스케줄 → BuildSettleInput → COBOL)이 접속돼야 의미가 있다. 현재 원장 조회·입력·네비게이션은 키보드 완주 가능, settlement_done 수신 시 기간별 잠금은 동작.
+**M9(2026-07-24) 통과.** 언어 구성 게이트 실측 (커밋된 HEAD, github-linguist):
+
+| 언어 | % | 언어 | % |
+|---|---|---|---|
+| JavaScript(메인) | 22.69 | Rust | 7.18 |
+| PLpgSQL | 11.69 | Lua | 6.67 |
+| Go | 9.62 | COBOL | 6.60 |
+| Prolog | 7.97 | Haskell | 6.40 |
+| Elixir | 7.94 | Julia | 6.00 |
+| R | 7.22 | | |
+
+- 게이트 통과: 11개 각 ≥5.0%(최저 Julia 6.00%), 미허용 언어 0, 메인 ≤35%. 부족·희석분은 **실제 기능+골든**으로 복원(Lua 자동화 규칙·COBOL 이자/리포트/감가상각·Julia 시나리오/민감도·Prolog 다통화 매칭·R 요약/Hampel/주간리포트). 주석 패딩 없음.
+- 음성 테스트(`linguist-gate.test.lua`) 7/7 — 하한 미만·미허용 언어·메인 초과·언어 누락이 게이트를 실패시킴 확인. CI linguist 잡 `continue-on-error` 제거(강제).
+- `make smoke`(infra/smoke.sh): db+마이그레이션+web/worker/prolog/realtime 클린 기동 → 헬스 4종 → 원장 E2E(계정→posted txn→잔액 부호, 금액 문자열 왕복) 전부 통과.
+- 배포: origin `JTech-CO/just-ledger` 로 push(레포 불변).
+
+**남은 후속(각 phase 범위 밖, worker 오케스트레이션 대기)**: 마감 실행 UI(월말 스케줄→COBOL), 인라인 편집 UPDATE API, analytics/simulation 야간 스케줄 접속, settlement Go 미러(interest/report/deprec). 실시간 소켓 토큰은 WS 표준상 쿼리(서버측 단명 토큰으로 완화).
 - 인라인 편집 UPDATE — txn PATCH API 후속(현재 편집 버튼은 상세 열기).
 - 실시간 소켓 토큰: WebSocket 핸드셰이크는 헤더를 못 써 토큰을 쿼리로 보낸다(Phoenix 표준). 완화는 서버측 단명 토큰.
 
@@ -174,6 +189,7 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | 2026-07-23 | `contracts/notify-envelope.schema.json` (신설) | NOTIFY(`ledger_events`) 페이로드를 `{owner_id, event}` 봉투로 — 실시간 경로엔 RLS 가 없어 owner_id 가 테넌트 격리의 유일한 근거. 브라우저 프레임(`event`)은 notify-event 그대로라 web 무영향 | db ✔(3발행부 봉투화·격리 회귀), realtime ✔(라우팅), web(무영향) | db ✔ / realtime ✔ |
 | 2026-07-23 | `notify-event.schema.json` (개정 — 적대검증) | `budget_alert`(예산 감시 GenServer 생성)·`sync`(채널 join 스냅샷) 프레임 추가 — 채널이 브라우저로 내보내는 모든 프레임이 SSOT 를 따르게. 금액·ratio 문자열 | realtime ✔, web(M8 소켓 클라이언트에서 applyRealtime 소비) | realtime ✔ / web 대기 |
 | 2026-07-23 | `db` 스키마: `budget_alert_log`(신설), `ledger_realtime` 권한 (개정 — M7) | 예산 알림 멱등 발화 기록(PK (budget_id, period_key)) — 감시자 재시작에도 중복 금지(DoD 4). ledger_realtime 에 budget·budget_alert_log 권한 부여(최소권한 롤로 예산 감시 동작). RLS 적용 | db ✔, realtime ✔(claim_alert) | db ✔ / realtime ✔ |
+| 2026-07-24 | `modules/settlement/copybook/{interest-io,report-io,deprec-io}.cpy` (신설 — M9) | 이자·리포트·감가상각 고정폭 레코드 SSOT: INTEREST-IN 63 / INTEREST-OUT 62, REPORT-IN 76(RD-BALANCE 는 SETTLE-OUT 과 동일 인코딩 — settle 출력을 직접 급식), DEPREC-IN 68 / DEPREC-OUT 64. 유리수 이율·NEAREST-EVEN·정수(PACKED-DECIMAL) | settlement ✔(interest/report/deprec.cbl), parity(lib/records.mjs·gen.mjs 미러) ✔ — 골든 3종. worker(Go 미러 미추가 — 이번 phase 는 COBOL 골든만) | settlement ✔ / parity ✔ / worker 대기 |
 
 ---
 
@@ -231,4 +247,4 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | M6 분석 | **통과** (DoD 1~5 실측: 바이트 결정론·재현율 1.000/FPR ≤0.0049·NaN 0/CI 0.0089·SVG 2벌 AA·캐시. analytics 58 + simulation 50 그린, CI analytics/simulation 잡 그린. 적대 검증 22건 수정) | 2026-07-23 |
 | M7 실시간 | **통과** (DoD 1~5 실측: DB→채널push p95 9.3ms·동시 100 유실 0·알림 커넥션 kill 후 자가복구+resync·실 SQL 소진액 멱등 발화·max_connections 대조. 통합 37건 그린. 봉투 owner_id 테넌트 격리. 적대 검증 16건 수정) | 2026-07-23 |
 | M8 UI·접근성 | **통과** (DoD 1~7 실측: 10만행 DOM 34개·스크롤 p95 0.6ms·컨테이너 쿼리 가로 오버플로 0(464px 실측)·대비 AA·키보드 완주+scrollToIndex·reduced-motion·settled 편집 DOM 제외. 테스트 53건 그린, CI web 잡 그린. 적대 검증 18건 확증·수정) | 2026-07-23 |
-| M9 언어 구성·배포 | 대기 | — |
+| M9 언어 구성·배포 | **통과** (DoD 1~6 실측: 계측 11개 언어 각 ≥5%(최저 Julia 6.00%)·미허용 언어 0·메인 JS 22.69%≤35%·음성 테스트 7/7 게이트 실패 확인·`make smoke` 전체 스택 클린 기동+원장 E2E 통과·README 11개 근거표. CI linguist 잡 강제 게이트 전환) | 2026-07-24 |
