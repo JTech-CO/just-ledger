@@ -132,7 +132,8 @@ check-no-float: ## INV-4 — 금액이 Number/float 경유하는 경로 0개
 bench-wasm: ## M3 DoD 3 — 50MB CSV 파싱 3초 이내 (wasm-pack 빌드 선행 필요)
 	node scripts/bench-wasm.mjs
 
-a11y: ## M8 — 접근성 검사
+a11y: ## M8 — 접근성 검사 (대비 AA·색각·reduced-motion) + 하드코딩 색상 0
+	node scripts/check-hardcoded-color.mjs
 	cd apps/web && pnpm test:a11y
 
 # ---------------------------------------------------------------------------

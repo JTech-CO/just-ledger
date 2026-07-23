@@ -167,9 +167,11 @@ jobs:
       - run: cd apps/web && pnpm install --frozen-lockfile
       - run: cd apps/web && pnpm lint
       - run: make check-no-float
+      - run: node scripts/check-hardcoded-color.mjs   # M8 DoD 2 — 토큰 외 색상 0
       - run: cd apps/web && pnpm build
       - run: cd apps/web && pnpm test:api
       - run: cd apps/web && pnpm test:ui
+      - run: cd apps/web && pnpm test:a11y            # M8 DoD 4·6·7
 
   # ── Go (worker + Lua 샌드박스) ───────────────────────────────────────────
   # 인제스트 통합 테스트는 실제 PostgreSQL(스크래치 DB) 위에서 돈다 — db 잡과 동일 구성.
