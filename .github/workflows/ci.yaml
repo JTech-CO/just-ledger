@@ -156,9 +156,19 @@ jobs:
       # 테스트 헬퍼가 psql 로 마이그레이션을 적용한다 — 서버(18)와 클라이언트 정합
       - name: postgresql-client-18 (pgdg)
         run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-common
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get install -y postgresql-client-18
+          # pgdg 미러(apt.postgresql.org)가 간헐적으로 무응답 → 타임아웃 없이 6h hang.
+          # 240s 타임아웃 × 3 재시도로 빠르게 끊고, 끝내 실패하면 ubuntu 기본 클라이언트로 폴백.
+          for i in 1 2 3; do
+            if timeout 240 bash -euxc '
+              sudo apt-get update
+              sudo apt-get install -y postgresql-common
+              sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+              sudo apt-get install -y postgresql-client-18
+            '; then exit 0; fi
+            echo "pgdg 설치 시도 $i 타임아웃/실패 — 재시도"; sleep 10
+          done
+          echo "pgdg 반복 실패 — ubuntu 기본 postgresql-client 로 폴백"
+          sudo apt-get install -y postgresql-client
       # 클라이언트가 statement-wasm pkg 를 임포트 — vite 빌드 전에 wasm 산출 필요
       - uses: dtolnay/rust-toolchain@stable
         with: { toolchain: '1.97.1', targets: wasm32-unknown-unknown }
@@ -195,9 +205,19 @@ jobs:
         with: { go-version: '1.26.5', cache-dependency-path: services/worker/go.sum }
       - name: postgresql-client-18 (pgdg)
         run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-common
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get install -y postgresql-client-18
+          # pgdg 미러(apt.postgresql.org)가 간헐적으로 무응답 → 타임아웃 없이 6h hang.
+          # 240s 타임아웃 × 3 재시도로 빠르게 끊고, 끝내 실패하면 ubuntu 기본 클라이언트로 폴백.
+          for i in 1 2 3; do
+            if timeout 240 bash -euxc '
+              sudo apt-get update
+              sudo apt-get install -y postgresql-common
+              sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+              sudo apt-get install -y postgresql-client-18
+            '; then exit 0; fi
+            echo "pgdg 설치 시도 $i 타임아웃/실패 — 재시도"; sleep 10
+          done
+          echo "pgdg 반복 실패 — ubuntu 기본 postgresql-client 로 폴백"
+          sudo apt-get install -y postgresql-client
       - run: cd services/worker && go vet ./...
       - run: cd services/worker && go build ./...
       - run: cd services/worker && go test ./...
@@ -240,9 +260,19 @@ jobs:
         with: { otp-version: '27.3.3', elixir-version: '1.18.3' }   # 컨테이너 확정 버전과 동일
       - name: postgresql-client-18 (pgdg)
         run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-common
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get install -y postgresql-client-18
+          # pgdg 미러(apt.postgresql.org)가 간헐적으로 무응답 → 타임아웃 없이 6h hang.
+          # 240s 타임아웃 × 3 재시도로 빠르게 끊고, 끝내 실패하면 ubuntu 기본 클라이언트로 폴백.
+          for i in 1 2 3; do
+            if timeout 240 bash -euxc '
+              sudo apt-get update
+              sudo apt-get install -y postgresql-common
+              sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+              sudo apt-get install -y postgresql-client-18
+            '; then exit 0; fi
+            echo "pgdg 설치 시도 $i 타임아웃/실패 — 재시도"; sleep 10
+          done
+          echo "pgdg 반복 실패 — ubuntu 기본 postgresql-client 로 폴백"
+          sudo apt-get install -y postgresql-client
       - uses: actions/cache@v4
         with:
           path: |
@@ -381,9 +411,19 @@ jobs:
       # psql/pg_dump 는 서버(18)와 메이저 일치해야 한다 — 러너 기본 client(16)는 pg_dump 거부.
       - name: postgresql-client-18 (pgdg)
         run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-common
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get install -y postgresql-client-18
+          # pgdg 미러(apt.postgresql.org)가 간헐적으로 무응답 → 타임아웃 없이 6h hang.
+          # 240s 타임아웃 × 3 재시도로 빠르게 끊고, 끝내 실패하면 ubuntu 기본 클라이언트로 폴백.
+          for i in 1 2 3; do
+            if timeout 240 bash -euxc '
+              sudo apt-get update
+              sudo apt-get install -y postgresql-common
+              sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+              sudo apt-get install -y postgresql-client-18
+            '; then exit 0; fi
+            echo "pgdg 설치 시도 $i 타임아웃/실패 — 재시도"; sleep 10
+          done
+          echo "pgdg 반복 실패 — ubuntu 기본 postgresql-client 로 폴백"
+          sudo apt-get install -y postgresql-client
       - run: make test-db
 
   # ── Lua 게이트 스크립트 자체 검증 (게이트+테스트 파일은 항상 존재) ─────────
