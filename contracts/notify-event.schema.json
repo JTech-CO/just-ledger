@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://just-ledger.dev/contracts/notify-event.schema.json",
   "title": "notify_event",
-  "description": "PostgreSQL NOTIFY → Elixir 채널 → 브라우저 store 로 흐르는 실시간 이벤트 프레임. store/ledgerStore.js applyRealtime 의 단일 진입점 계약. M1 DoD 6 / M7 검증 대상.",
+  "description": "실시간 이벤트 프레임 — store/ledgerStore.js applyRealtime 의 단일 진입점 계약. balance_changed·settlement_done·ingest_progress 는 PostgreSQL NOTIFY 에서, budget_alert 는 realtime 의 예산 감시 GenServer 에서, sync 는 채널 join 직후 스냅샷에서 온다. 모두 같은 채널로 브라우저에 도달하므로 한 계약이 형태를 강제한다. M1 DoD 6 / M7 검증 대상.",
   "type": "object",
   "required": ["type"],
   "oneOf": [
@@ -42,6 +42,40 @@
         "state": { "$ref": "common.schema.json#/$defs/ingestState" },
         "processed": { "type": "integer", "minimum": 0 },
         "total": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "budget_id", "period", "limit_minor", "spent_minor", "ratio"],
+      "properties": {
+        "type": { "const": "budget_alert" },
+        "budget_id": { "$ref": "common.schema.json#/$defs/uuid" },
+        "period": {
+          "description": "예산 기간 키 — 월간 YYYY-MM / 분기 YYYY-Qn / 연간 YYYY. 같은 (예산, 기간)에 대해 알림은 최대 1회 (M7 DoD 4).",
+          "type": "string",
+          "pattern": "^[0-9]{4}(-(0[1-9]|1[0-2])|-Q[1-4])?$"
+        },
+        "limit_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" },
+        "spent_minor": { "$ref": "common.schema.json#/$defs/moneyMinor" },
+        "ratio": {
+          "description": "임계 비율 num/den (부동소수점 미경유 — 정수쌍 문자열)",
+          "type": "string",
+          "pattern": "^[0-9]+/[1-9][0-9]*$"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "balances"],
+      "properties": {
+        "type": { "const": "sync" },
+        "balances": {
+          "description": "채널 join 시점의 계정별 잔액 전체 — 재접속 시 놓친 변경을 현재 상태로 수렴시킨다 (M7 DoD 3).",
+          "type": "array",
+          "items": { "$ref": "balance.schema.json" }
+        }
       }
     }
   ]
