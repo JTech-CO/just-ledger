@@ -1,0 +1,65 @@
+# GitHub Pages — UI 데모 배포.
+#
+# 배포되는 것은 **클라이언트 UI 뿐**이다. 서버·DB 는 정적 호스팅에 올릴 수 없으므로
+# 데이터 계층은 인메모리 목으로 대체된다(vite --mode demo, apps/web/client/lib/demo).
+# 목 어댑터가 wasm·WebSocket 의존을 걷어내므로 Rust 툴체인 없이 빌드된다.
+#
+# Pages 소스는 저장소 설정에서 "GitHub Actions" 여야 한다(legacy 브랜치 빌드 아님).
+
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 직렬화하되 진행 중인 배포를 취소하지는 않는다(중간 상태 게시 방지).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: 의존성 설치
+        run: cd apps/web && pnpm install --frozen-lockfile
+      - name: 데모 빌드 (mock 어댑터)
+        run: cd apps/web && pnpm build:demo
+      - name: 산출물 점검 — 데모에 서버 의존이 남지 않았는지
+        run: |
+          cd apps/web/dist
+          test -f index.html
+          # base 가 /just-ledger/ 로 주입됐는지
+          grep -q '/just-ledger/assets/' index.html
+          # 목으로 교체된 경로가 번들에 남아 있으면 실패 (WebSocket 재접속·wasm 로드)
+          ! grep -rq 'statement_wasm' assets/ || (echo '번들에 wasm 참조가 남아 있습니다' && exit 1)
+          ! grep -rq 'new WebSocket' assets/ || (echo '번들에 WebSocket 접속이 남아 있습니다' && exit 1)
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: apps/web/dist }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
