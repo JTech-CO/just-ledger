@@ -276,8 +276,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # cabal-update: false — setup 이 부팅 시 cabal update 를 돌리는데, 그 경로가
+      # dream.io Hackage 미러(간헐 404, cabal#9516)에 의존해 잡을 죽인다. 갱신은
+      # 아래에서 실패를 허용하며 직접 돌리고, 인덱스는 캐시에서 복원한다.
       - uses: haskell-actions/setup@v2
-        with: { ghc-version: '9.10.3', cabal-version: '3.16.1.0' }   # 컨테이너 확정 버전(ghcup recommended/latest)과 동일
+        with: { ghc-version: '9.10.3', cabal-version: '3.16.1.0', cabal-update: false }   # 컨테이너 확정 버전
       - uses: actions/cache@v4
         with:
           path: |
@@ -287,7 +290,10 @@ jobs:
             modules/rules-dsl/dist-newstyle
           key: dsl-${{ runner.os }}-ghc9.10.3-${{ hashFiles('modules/rules-dsl/rules-dsl.cabal') }}
           restore-keys: dsl-${{ runner.os }}-ghc9.10.3-
-      - run: cd modules/rules-dsl && cabal update && cabal build
+      # 미러 404 여도 캐시된 패키지 인덱스로 build 가 되도록 update 실패를 허용한다.
+      # 캐시 미스 + 미러 장애가 겹치면 build 가 실패하며 원인을 드러낸다(조용한 통과 아님).
+      - run: cd modules/rules-dsl && (cabal update || echo "cabal update 실패 — 캐시 인덱스로 진행")
+      - run: cd modules/rules-dsl && cabal build
       - run: cd modules/rules-dsl && cabal test
 
   # ── COBOL (마감 정산) + 정합성 대조 ───────────────────────────────────────
