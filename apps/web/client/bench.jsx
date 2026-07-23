@@ -60,11 +60,12 @@ function Bench() {
       const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? 0;
       const avg = measured.reduce((s, x) => s + x, 0) / measured.length;
       const fps = 1000 / avg;
+      // 아래 toFixed 는 금액이 아니라 벤치 성능 수치(ms·fps)다 — INV-4 무관.
       const r = {
         frames: measured.length,
-        avg_ms: +avg.toFixed(2),
-        p95_ms: +p95.toFixed(2),
-        avg_fps: +fps.toFixed(1),
+        avg_ms: +avg.toFixed(2), // no-float-ok: 프레임 시간(ms), 금액 아님
+        p95_ms: +p95.toFixed(2), // no-float-ok: 프레임 시간(ms), 금액 아님
+        avg_fps: +fps.toFixed(1), // no-float-ok: 초당 프레임, 금액 아님
         max_dom_rows: nodes,
         total_rows: N,
         // 60fps = 프레임당 16.67ms. p95 가 이 아래면 60fps 유지.
