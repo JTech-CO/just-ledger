@@ -6,7 +6,12 @@
 
 ## 현재 phase
 
-**M8 — UI 완성 및 접근성 (JavaScript)** (구현 완료, 적대 검증 반영 중)
+**M9 — 언어 구성 게이트 및 배포** (착수 전)
+
+**M8(2026-07-23) 통과.** 남은 후속(M8 범위 밖, M9/오케스트레이션에서 접속):
+- 마감(settlement) **실행** 컨트롤 — 마감 UI 버튼은 worker 오케스트레이션(월말 마감 스케줄 → BuildSettleInput → COBOL)이 접속돼야 의미가 있다. 현재 원장 조회·입력·네비게이션은 키보드 완주 가능, settlement_done 수신 시 기간별 잠금은 동작.
+- 인라인 편집 UPDATE — txn PATCH API 후속(현재 편집 버튼은 상세 열기).
+- 실시간 소켓 토큰: WebSocket 핸드셰이크는 헤더를 못 써 토큰을 쿼리로 보낸다(Phoenix 표준). 완화는 서버측 단명 토큰.
 
 M0~M7 게이트 통과. **M8(2026-07-23):** UI 계층 완성 —
 - **컴포넌트**(디자인 백서 §2-5, CSS Modules + 토큰 전용): LedgerTable 가상 스크롤(@tanstack/react-virtual), Money(색+부호 병기), 3열 셸(AppShell/Topbar/AccountTree/BalanceSummary), Inspector, FixedWidthReport, ReportChart.
@@ -225,5 +230,5 @@ M0·M1·M2 게이트 통과(전부 2026-07-21). 미결질문 #3 해소: 골든 3
 | M5 정산 | **통과** (INV-7 차이 0원: 10,000 entry·상각 481행·0.5 경계 400건 삼자 일치, 로컬 3.2.0 + CI 3.1.2 이종 재현 — CI 런 29895860120 settlement·worker 그린. DSL 스펙 유효 20/오류 29/위치 exact. 적대 검증 15건 수정) | 2026-07-22 |
 | M6 분석 | **통과** (DoD 1~5 실측: 바이트 결정론·재현율 1.000/FPR ≤0.0049·NaN 0/CI 0.0089·SVG 2벌 AA·캐시. analytics 58 + simulation 50 그린, CI analytics/simulation 잡 그린. 적대 검증 22건 수정) | 2026-07-23 |
 | M7 실시간 | **통과** (DoD 1~5 실측: DB→채널push p95 9.3ms·동시 100 유실 0·알림 커넥션 kill 후 자가복구+resync·실 SQL 소진액 멱등 발화·max_connections 대조. 통합 37건 그린. 봉투 owner_id 테넌트 격리. 적대 검증 16건 수정) | 2026-07-23 |
-| M8 UI·접근성 | 대기 | — |
+| M8 UI·접근성 | **통과** (DoD 1~7 실측: 10만행 DOM 34개·스크롤 p95 0.6ms·컨테이너 쿼리 가로 오버플로 0(464px 실측)·대비 AA·키보드 완주+scrollToIndex·reduced-motion·settled 편집 DOM 제외. 테스트 53건 그린, CI web 잡 그린. 적대 검증 18건 확증·수정) | 2026-07-23 |
 | M9 언어 구성·배포 | 대기 | — |
