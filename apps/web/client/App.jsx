@@ -1,20 +1,8 @@
-// 앱 셸 최소판 (M2). 사이드바·기간 네비게이션·테마 토글은 M8.
+// 앱 루트. 셸(Topbar·사이드바·상세)은 LedgerPage 가 AppShell 로 구성한다 —
+// 여기서 별도 헤더를 두지 않는다(중복 헤더 + 내부-스크롤 모델 붕괴 방지, M8).
 
 import LedgerPage from './pages/LedgerPage.jsx';
 
 export default function App() {
-  return (
-    <>
-      <header
-        style={{
-          padding: 'var(--sp-3) var(--sp-5)',
-          borderBottom: '1px solid var(--border-strong)',
-          background: 'var(--surface)',
-        }}
-      >
-        <strong>just-ledger</strong> <span className="muted">복식부기 개인 원장</span>
-      </header>
-      <LedgerPage />
-    </>
-  );
+  return <LedgerPage />;
 }

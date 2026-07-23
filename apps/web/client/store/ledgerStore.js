@@ -15,7 +15,9 @@ export const useLedgerStore = create((set, get) => ({
   balances: new Map(),
   totalCount: 0,
   selection: new Set(),
-  isSettled: false,
+  /** @type {Set<string>} 마감된 기간(YYYY-MM) 집합. 한 기간 마감이 다른 기간을
+   *  잠그지 않는다 — settlement_done 계약의 period 로 이 집합만 갱신한다. */
+  settledPeriods: new Set(),
   /** @type {string|null} */
   lastError: null,
   /** 초기/재조회 실패 여부 — 빈 원장과 구분해 재시도 UI 를 띄운다 */
@@ -52,7 +54,14 @@ export const useLedgerStore = create((set, get) => ({
         break;
       }
       case 'settlement_done':
-        set({ isSettled: true });
+        // 계약의 period.end 가 속한 달만 마감 처리한다 — 전역 잠금이 아니다.
+        // (한 기간 마감이 열린 다른 기간의 수기 입력·편집까지 막으면 안 된다.)
+        set((s) => {
+          const settledPeriods = new Set(s.settledPeriods);
+          const month = evt.period?.end?.slice(0, 7);
+          if (month) settledPeriods.add(month);
+          return { settledPeriods };
+        });
         break;
       case 'budget_alert':
         set((s) => {

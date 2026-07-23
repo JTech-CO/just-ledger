@@ -18,8 +18,9 @@ const TOKENS = join(SCAN_DIR, 'styles', 'tokens.css');
 // hex 색: #rgb / #rrggbb / #rrggbbaa (단어 경계). rgb()/hsl()/rgba()/hsla().
 const HEX = /#[0-9a-fA-F]{3,8}\b/g;
 const FUNC = /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\(/g;
-// CSS 색 키워드(자주 쓰이는 것). transparent/currentColor/inherit 는 허용.
-const NAMED = /\b(?:white|black|red|green|blue|gray|grey|silver|navy|teal|orange|purple|yellow|pink|brown|cyan|magenta|gold|maroon|olive|lime|aqua|fuchsia)\b/gi;
+// CSS 명명색. transparent/currentColor/inherit/none 은 허용(색 값이 아니거나 상속).
+// 자주 오용되는 확장 명명색까지 포함한다(crimson·tomato·coral 등).
+const NAMED = /\b(?:white|black|red|green|blue|gray|grey|silver|navy|teal|orange|purple|yellow|pink|brown|cyan|magenta|gold|maroon|olive|lime|aqua|fuchsia|crimson|tomato|coral|salmon|khaki|violet|indigo|turquoise|orchid|plum|beige|ivory|azure|lavender|chocolate|firebrick|skyblue|steelblue|slategray|slategrey|darkred|darkgreen|darkblue|lightgray|lightgrey|dodgerblue|seagreen|forestgreen|goldenrod|tan|wheat|snow|linen|mintcream)\b/gi;
 
 function walk(dir) {
   const out = [];

@@ -1,20 +1,25 @@
-/* 원장 표 — 가상 스크롤. 행 높이 34px 고정, hairline 하단선만 (§2.3). */
+/* 원장 표 — 가상 스크롤. 행 높이 34px, hairline 하단선만 (§2.3).
+   반응형은 **컨테이너 쿼리**로 한다: 상세 패널이 열려 표 폭이 좁아지면
+   뷰포트는 그대로여도 표가 반응해야 가로 스크롤이 안 생긴다(§4.2 · DoD 5). */
 
 .wrap {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   background: var(--surface);
+  container-type: inline-size;
+  container-name: ledger;
 }
 
 /* 컬럼 격자 — 헤더·행이 같은 템플릿을 공유해 정렬이 흔들리지 않는다.
-   금액 컬럼은 절대 축약하지 않는다 (§4.2). */
+   금액 컬럼(128px)은 어떤 폭에서도 유지한다 (§4.2). */
 .head,
 .row {
   display: grid;
   grid-template-columns:
-    [date] 92px [memo] minmax(120px, 1.4fr) [counter] minmax(100px, 1fr)
-    [account] 88px [debit] 128px [credit] 128px [edit] 36px;
+    [date] 88px [memo] minmax(96px, 1.4fr) [counter] minmax(88px, 1fr)
+    [account] 80px [debit] 124px [credit] 124px [edit] 34px;
   align-items: center;
   column-gap: var(--sp-3);
   padding-inline: var(--sp-3);
@@ -52,7 +57,6 @@
   border-bottom: 1px solid var(--border);
   font-size: 15px;
   cursor: default;
-  /* 행은 배경만 바뀐다 — transform/scale/그림자 없음 (§2.2) */
   transition: background-color var(--dur-color) var(--ease);
 }
 
@@ -60,13 +64,11 @@
   background: var(--row-hover);
 }
 
-/* 선택: 좌측 2px accent 인디케이터 + 배경. 테두리 전체를 두르지 않는다(§2.2). */
 .active {
   background: var(--row-hover);
   box-shadow: inset 2px 0 0 0 var(--accent);
 }
 
-/* 시그니처: 마감선. settled 는 3px double, 마감 전은 예고선 (§4.3). */
 .periodEndSettled {
   border-bottom: 3px double var(--text);
 }
@@ -92,7 +94,6 @@
 .amountHead { text-align: right; justify-self: end; }
 .colEdit { grid-column: edit; justify-self: center; }
 
-/* 헤더의 차변/대변 위치를 명시 (nth 로 debit/credit 배치) */
 .head .colAmount:nth-of-type(1) { grid-column: debit; }
 .head .colAmount:nth-of-type(2) { grid-column: credit; }
 
@@ -118,19 +119,30 @@
   color: var(--text-muted);
 }
 
-/* ── 반응형: 768~1023 상대처 숨김, <768 카드 (§4.2) ─────────────────────── */
-@media (max-width: 1023px) {
+/* ── 컨테이너 쿼리: 표 폭이 좁아지면 상대처→계정 순으로 숨긴다.
+      금액 컬럼은 절대 숨기지 않는다 (§4.2). ────────────────────────────── */
+@container ledger (max-width: 640px) {
   .head,
   .row {
     grid-template-columns:
-      [date] 84px [memo] minmax(100px, 1.6fr) [account] 80px
-      [debit] 120px [credit] 120px [edit] 36px;
+      [date] 80px [memo] minmax(80px, 1.6fr) [account] 76px
+      [debit] 120px [credit] 120px [edit] 34px;
   }
   .colCounter { display: none; }
 }
 
-@media (max-width: 767px) {
-  /* 표 → 카드 리스트. 금액은 절대 숨기지 않는다 (§4.2). */
+@container ledger (max-width: 500px) {
+  .head,
+  .row {
+    grid-template-columns:
+      [date] 76px [memo] minmax(64px, 1fr) [debit] 116px [credit] 116px [edit] 34px;
+  }
+  .colAccount { display: none; }
+}
+
+/* 표 → 카드 리스트. 행 높이는 measureElement 로 실측되므로(가상화 정합)
+   고정 34px 가정과 어긋나지 않는다. */
+@container ledger (max-width: 420px) {
   .head { display: none; }
   .row {
     grid-template-columns: 1fr auto;

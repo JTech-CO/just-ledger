@@ -12,7 +12,7 @@ const reset = () =>
     flashKeys: new Set(),
     budgetAlerts: new Map(),
     ingest: new Map(),
-    isSettled: false,
+    settledPeriods: new Set(),
   });
 
 describe('applyRealtime — M7 계약 프레임 병합', () => {
@@ -47,9 +47,16 @@ describe('applyRealtime — M7 계약 프레임 병합', () => {
     expect(s.balances.get('b:USD')).toBe('-200');
   });
 
-  it('settlement_done: isSettled=true', () => {
+  it('settlement_done: 계약 period 의 달만 settledPeriods 에 추가(전역 잠금 아님)', () => {
     useLedgerStore.getState().applyRealtime({ type: 'settlement_done', period: { start: '2026-05-01', end: '2026-05-31' } });
-    expect(useLedgerStore.getState().isSettled).toBe(true);
+    const sp = useLedgerStore.getState().settledPeriods;
+    expect(sp.has('2026-05')).toBe(true);
+    expect(sp.has('2026-06')).toBe(false); // 다른 기간은 열린 채로
+
+    // 다른 기간 마감은 누적된다 (한 기간이 다른 기간을 잠그지 않는다)
+    useLedgerStore.getState().applyRealtime({ type: 'settlement_done', period: { start: '2026-06-01', end: '2026-06-30' } });
+    expect(useLedgerStore.getState().settledPeriods.has('2026-06')).toBe(true);
+    expect(useLedgerStore.getState().settledPeriods.has('2026-05')).toBe(true);
   });
 
   it('budget_alert: budgetAlerts 에 budget_id 키로 병합', () => {

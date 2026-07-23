@@ -7,7 +7,7 @@
 // role="table" 시맨틱을 유지해 스크린리더·키보드 조작이 가능하다. 선택/편집은
 // 상위(키보드 훅)가 activeIndex·onSelect·onEdit 로 제어한다.
 
-import { useRef } from 'react';
+import { forwardRef, useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Pencil } from 'lucide-react';
 import { sumByDirection } from '../../lib/money.js';
@@ -34,8 +34,24 @@ export default function LedgerTable({ rows, accountName, activeIndex, onSelect, 
     count: rows.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
+    // 카드 모드(좁은 컨테이너)에서는 행 높이가 34px 가 아니라 52px+ 다. 실제
+    // 높이를 측정해 가상화 위치를 정합시킨다(고정 34 가정 시 행이 겹치거나 잘림).
+    // 렌더된 행만 측정하므로 10만행에서도 비용은 뷰포트 창에 국한된다.
+    measureElement: (el) => el?.getBoundingClientRect().height ?? ROW_HEIGHT,
     overscan: 12,
   });
+
+  // 키보드 j/k 로 활성 행이 바뀌면 뷰포트를 따라가게 스크롤한다(DoD 3). 가상
+  // 스크롤에서는 화면 밖 행이 렌더조차 안 되므로, scrollToIndex 없이는 선택 행이
+  // 사라져 조작·낭독이 불가능하다. align:'auto' — 이미 보이면 스크롤하지 않는다.
+  useEffect(() => {
+    if (activeIndex >= 0 && activeIndex < rows.length) {
+      virtualizer.scrollToIndex(activeIndex, { align: 'auto' });
+    }
+  }, [activeIndex, rows.length, virtualizer]);
+
+  // 활성 행 id — 스크린리더가 aria-activedescendant 로 낭독한다
+  const activeId = activeIndex >= 0 && activeIndex < rows.length ? `ledger-row-${activeIndex}` : undefined;
 
   return (
     <div className={styles.wrap} role="table" aria-label="원장" aria-rowcount={rows.length}>
@@ -52,7 +68,13 @@ export default function LedgerTable({ rows, accountName, activeIndex, onSelect, 
       {rows.length === 0 ? (
         <p className={styles.empty}>거래가 없습니다. 아래에서 수기 입력하거나 명세서를 올리세요.</p>
       ) : (
-        <div ref={parentRef} className={styles.scroll} tabIndex={0} aria-label="원장 스크롤 영역">
+        <div
+          ref={parentRef}
+          className={styles.scroll}
+          tabIndex={0}
+          aria-label="원장 스크롤 영역"
+          aria-activedescendant={activeId}
+        >
           <div className={styles.sizer} style={{ height: `${virtualizer.getTotalSize()}px` }}>
             {virtualizer.getVirtualItems().map((vi) => {
               const t = rows[vi.index];
@@ -62,6 +84,8 @@ export default function LedgerTable({ rows, accountName, activeIndex, onSelect, 
               return (
                 <Row
                   key={t.id}
+                  ref={virtualizer.measureElement}
+                  dataIndex={vi.index}
                   txn={t}
                   rowIndex={vi.index}
                   accountName={accountName}
@@ -81,7 +105,10 @@ export default function LedgerTable({ rows, accountName, activeIndex, onSelect, 
   );
 }
 
-export function Row({ txn, rowIndex, accountName, translateY, active, periodEnd, settled, onSelect, onEdit }) {
+export const Row = forwardRef(function Row(
+  { txn, rowIndex, dataIndex, accountName, translateY, active, periodEnd, settled, onSelect, onEdit },
+  measureRef,
+) {
   let sums;
   try {
     sums = sumByDirection(txn.entries);
@@ -94,7 +121,10 @@ export function Row({ txn, rowIndex, accountName, translateY, active, periodEnd,
 
   return (
     <div
+      ref={measureRef}
+      data-index={dataIndex}
       role="row"
+      id={`ledger-row-${rowIndex}`}
       aria-rowindex={rowIndex + 1}
       aria-selected={active}
       data-txn-id={txn.id}
@@ -132,4 +162,4 @@ export function Row({ txn, rowIndex, accountName, translateY, active, periodEnd,
       </span>
     </div>
   );
-}
+});

@@ -14,7 +14,7 @@ import LedgerTable from '../components/ledger/LedgerTable.jsx';
 import Inspector from '../components/ledger/Inspector.jsx';
 import TxnForm from '../components/ledger/TxnForm.jsx';
 import IngestPanel from '../components/ledger/IngestPanel.jsx';
-import { sumByDirection, addMinor } from '../lib/money.js';
+import { sumByDirection } from '../lib/money.js';
 import Money from '../components/common/Money.jsx';
 import styles from './LedgerPage.module.css';
 
@@ -25,7 +25,7 @@ const monthOf = (d) => (typeof d === 'string' ? d.slice(0, 7) : '');
  * @param {{url:string, token:string, ownerId:string}} [props.socket]  실시간 연결 정보(없으면 비활성)
  */
 export default function LedgerPage({ socket }) {
-  const { rows, accounts, addTxn, loadAll, lastError, loadFailed, isSettled, socketConnected } =
+  const { rows, accounts, addTxn, loadAll, lastError, loadFailed, settledPeriods, socketConnected } =
     useLedgerStore();
   const { theme, toggle } = useTheme();
 
@@ -34,7 +34,11 @@ export default function LedgerPage({ socket }) {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [detailTxn, setDetailTxn] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const searchRef = useRef(null);
+
+  // 현재 선택 기간이 마감됐는지 — 특정 기간만 잠근다(전역 아님, 계약 period 반영)
+  const currentSettled = period !== '' && settledPeriods.has(period);
 
   useEffect(() => {
     loadAll().catch(() => {});
@@ -73,20 +77,21 @@ export default function LedgerPage({ socket }) {
     });
   }, [rows, period, selectedAccount, query]);
 
-  // 합계 — BigInt 문자열 (INV-4)
+  // 합계 — BigInt 무제한 누적(INV-4). addMinor 는 계약 moneyMinor(18자리)라
+  // 누적합이 넘으면 throw 하므로, 합계에는 BigInt 를 직접 쓴다(과소집계 방지).
   const totals = useMemo(() => {
-    let debit = '0';
-    let credit = '0';
+    let debit = 0n;
+    let credit = 0n;
     for (const t of filtered) {
       try {
         const s = sumByDirection(t.entries);
-        debit = addMinor(debit, s.debit);
-        credit = addMinor(credit, s.credit);
+        debit += BigInt(s.debit);
+        credit += BigInt(s.credit);
       } catch {
-        /* 비정상 분개 행은 합계에서 제외 */
+        /* 비정상 분개 행만 합계에서 제외 (자릿수 초과는 위 BigInt 로 안전) */
       }
     }
-    return { debit, credit };
+    return { debit: debit.toString(), credit: credit.toString() };
   }, [filtered]);
 
   const activeTxn = activeIndex >= 0 ? filtered[activeIndex] : null;
@@ -102,6 +107,7 @@ export default function LedgerPage({ socket }) {
     onSearch: () => searchRef.current?.focus(),
     onEscape: () => {
       setDetailTxn(null);
+      setSidebarOpen(false);
       searchRef.current?.blur();
     },
   });
@@ -127,6 +133,7 @@ export default function LedgerPage({ socket }) {
       onQuery={setQuery}
       theme={theme}
       onToggleTheme={toggle}
+      onMenuClick={() => setSidebarOpen((v) => !v)}
     />
   );
 
@@ -151,7 +158,7 @@ export default function LedgerPage({ socket }) {
             setActiveIndex(i);
             setDetailTxn(filtered[i]);
           }}
-          onEdit={isSettled ? undefined : (t) => setDetailTxn(t)}
+          onEdit={(t) => setDetailTxn(t)}
         />
       </div>
 
@@ -162,8 +169,13 @@ export default function LedgerPage({ socket }) {
         <Money minor={totals.credit} tone="credit" />
       </div>
 
-      {/* settled 기간에는 수기 입력 폼을 렌더링하지 않는다 (DoD 7) */}
-      {!isSettled && (
+      {/* 마감된 기간에는 수기 입력 폼을 렌더링하지 않는다 (DoD 7). 마감 기간이
+          아닐 때만 — 다른 열린 기간은 계속 입력 가능하다. */}
+      {currentSettled ? (
+        <p className={styles.notice} role="status">
+          {period} 기간은 마감되어 편집·입력할 수 없습니다.
+        </p>
+      ) : (
         <section className={styles.entry} aria-label="수기 거래">
           <h2 className={styles.entryTitle}>수기 거래</h2>
           <TxnForm accounts={accounts} onSubmit={addTxn} />
@@ -184,6 +196,8 @@ export default function LedgerPage({ socket }) {
       topbar={topbar}
       sidebar={sidebar}
       main={main}
+      sidebarOpen={sidebarOpen}
+      onCloseSidebar={() => setSidebarOpen(false)}
       inspector={
         detailTxn && (
           <Inspector txn={detailTxn} accountName={accountName} onClose={() => setDetailTxn(null)} />

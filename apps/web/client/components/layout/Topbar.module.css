@@ -12,6 +12,23 @@
   z-index: 10;
 }
 
+.menuBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--text-muted);
+}
+
+/* 태블릿 이하에서만 메뉴 버튼 노출 (데스크톱은 사이드바 항상 보임) */
+@media (max-width: 1023px) {
+  .menuBtn {
+    display: inline-flex;
+  }
+}
+
 .logo {
   font-size: 15px;
   font-weight: 600;

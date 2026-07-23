@@ -4,6 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>just-ledger</title>
+    <!-- FOUC 방지: 저장 테마를 페인트 전에 root 에 스탬프한다. useTheme 의
+         useEffect(페인트 후)만으로는, 저장 테마가 OS 스킴과 다를 때 매 로드마다
+         반대 테마가 한 프레임 번쩍인다. tokens.css 의 data-theme 규칙과 짝. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('jl-theme');
+          if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {
+          /* localStorage 차단(프라이빗) — 자동 감지에 맡긴다 */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

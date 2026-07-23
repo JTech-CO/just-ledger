@@ -2,7 +2,7 @@
 // 검색·테마 토글·사용자 우측. sticky, 그림자 없음, 하단 1px --border.
 
 import { forwardRef } from 'react';
-import { Search, Sun, Moon } from 'lucide-react';
+import { Search, Sun, Moon, Menu } from 'lucide-react';
 import styles from './Topbar.module.css';
 
 /**
@@ -16,11 +16,15 @@ import styles from './Topbar.module.css';
  * @param {()=>void} props.onToggleTheme
  */
 const Topbar = forwardRef(function Topbar(
-  { period, periods, onPeriod, query, onQuery, theme, onToggleTheme },
+  { period, periods, onPeriod, query, onQuery, theme, onToggleTheme, onMenuClick },
   searchRef,
 ) {
   return (
     <header className={styles.bar}>
+      {/* 태블릿 이하에서만 보이는 사이드바 토글 (데스크톱은 CSS 로 숨김) */}
+      <button type="button" className={styles.menuBtn} onClick={onMenuClick} aria-label="사이드바 열기">
+        <Menu size={16} strokeWidth={1.75} aria-hidden="true" />
+      </button>
       <span className={styles.logo}>just-ledger</span>
 
       <label className={styles.periodLabel}>

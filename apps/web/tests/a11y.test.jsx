@@ -44,6 +44,17 @@ describe('대비비 WCAG 2.1 AA (DoD 4)', () => {
 
       it('accent(포커스 링·인디케이터) ≥ 3:1 비텍스트', () => {
         expect(contrastRatio(tok.accent, tok.surface)).toBeGreaterThanOrEqual(3);
+        // 포커스 링은 배경(bg)과도 3:1 (§2.4 — 포커스는 항상 가시)
+        expect(contrastRatio(tok.accent, tok.bg)).toBeGreaterThanOrEqual(3);
+      });
+
+      it('warning 텍스트(예산 경고·offline) ≥ 4.5:1', () => {
+        expect(contrastRatio(tok.warning, tok.surface)).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('primary 버튼: accent 배경 위 surface 텍스트 ≥ 4.5:1 (button.primary)', () => {
+        // global.css button.primary { background: accent; color: surface }
+        expect(contrastRatio(tok.surface, tok.accent)).toBeGreaterThanOrEqual(4.5);
       });
     });
   }

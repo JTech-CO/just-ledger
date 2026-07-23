@@ -31,10 +31,13 @@ describe('가로 스크롤 정책 (DoD 5)', () => {
 });
 
 describe('반응형 브레이크포인트 (§4.2)', () => {
-  it('표에 1023·767 브레이크포인트가 있다', () => {
+  it('표는 컨테이너 쿼리로 반응한다 — 뷰포트가 아닌 표 폭 기준(상세 패널 열림 대응)', () => {
     const css = read('components/ledger/LedgerTable.module.css');
-    expect(css).toMatch(/max-width:\s*1023px/);
-    expect(css).toMatch(/max-width:\s*767px/);
+    // 뷰포트 media 가 아니라 @container 여야 상세 패널로 표가 좁아질 때도 반응한다
+    expect(css).toMatch(/container-type:\s*inline-size/);
+    expect(css).toMatch(/@container ledger \(max-width:/);
+    // 상대처→계정 순 축소 + 카드 전환 3구간
+    expect((css.match(/@container ledger \(max-width:/g) || []).length).toBeGreaterThanOrEqual(3);
   });
 
   it('금액 컬럼은 어떤 브레이크포인트에서도 숨기지 않는다 (§4.2)', () => {
