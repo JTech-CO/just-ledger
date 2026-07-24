@@ -24,6 +24,12 @@
 - `make smoke`(infra/smoke.sh): db+마이그레이션+web/worker/prolog/realtime 클린 기동 → 헬스 4종 → 원장 E2E(계정→posted txn→잔액 부호, 금액 문자열 왕복) 전부 통과.
 - 배포: origin `JTech-CO/just-ledger` 로 push(레포 불변).
 
+**공개 웹 표면 (GitHub Pages, `pages.yml`).** 프로덕션 코드엔 분기 없이 `vite` 모드 별칭으로만 교체(`apps/web/vite.config.js`):
+- `https://jtech-co.github.io/just-ledger/` — 체험 데모(`--mode demo`, `lib/demo/*`). 인메모리 목, 새로고침 시 초기화. 모의 데이터 자동 표시.
+- `https://jtech-co.github.io/just-ledger/app/` — 설치형 앱 PWA(`--mode app`, `lib/local/*` + `public/{manifest.webmanifest,sw.js,icon.svg}`). IndexedDB 영속·오프라인·설치 가능. 데이터는 기기 로컬(내보내기/가져오기로 백업).
+- 데모·앱이 공유하는 클라이언트측 원장 규칙은 `lib/ledgerCore.js`(복식부기·금액·부호, 서버 정본의 오프라인 재현). 회귀 테스트 `tests/ledgerCore.test.js`.
+- **주의**: 두 표면 모두 UI 계층만. 마감(COBOL)·분류(Prolog)·다중사용자는 서버 계층이라 미포함.
+
 **남은 후속(각 phase 범위 밖, worker 오케스트레이션 대기)**: 마감 실행 UI(월말 스케줄→COBOL), 인라인 편집 UPDATE API, analytics/simulation 야간 스케줄 접속, settlement Go 미러(interest/report/deprec). 실시간 소켓 토큰은 WS 표준상 쿼리(서버측 단명 토큰으로 완화).
 - 인라인 편집 UPDATE — txn PATCH API 후속(현재 편집 버튼은 상세 열기).
 - 실시간 소켓 토큰: WebSocket 핸드셰이크는 헤더를 못 써 토큰을 쿼리로 보낸다(Phoenix 표준). 완화는 서버측 단명 토큰.
