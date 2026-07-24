@@ -6,21 +6,21 @@
 import { useState } from 'react';
 import LedgerPage from '../../pages/LedgerPage.jsx';
 import { useLedgerStore } from '../../store/ledgerStore.js';
-import { setDemoRowTarget } from './mockApi.js';
+import { setDemoProfile } from './mockApi.js';
 import styles from './DemoBanner.module.css';
 
 const REPO = 'https://github.com/JTech-CO/just-ledger';
 
 export default function DemoApp() {
-  const [rows, setRows] = useState(1500);
+  const [profile, setProfile] = useState('household');
   const [busy, setBusy] = useState(false);
 
-  async function reseed(n) {
+  async function load(name) {
     setBusy(true);
-    setDemoRowTarget(n);
+    setDemoProfile(name);
     try {
       await useLedgerStore.getState().loadAll();
-      setRows(n);
+      setProfile(name);
     } catch {
       // loadAll 이 스토어에 오류를 남긴다 — 배너에서 따로 표시하지 않는다
     } finally {
@@ -35,11 +35,11 @@ export default function DemoApp() {
           <strong>데모</strong> · 모의 데이터입니다. 새로고침하면 초기화됩니다.
         </p>
         <div className={styles.controls}>
-          <button type="button" onClick={() => reseed(1500)} disabled={busy || rows === 1500}>
-            1,500건
+          <button type="button" onClick={() => load('household')} disabled={busy || profile === 'household'}>
+            가계 · 1,500건
           </button>
-          <button type="button" onClick={() => reseed(100000)} disabled={busy || rows === 100000}>
-            10만건
+          <button type="button" onClick={() => load('company')} disabled={busy || profile === 'company'}>
+            회사 · 10만건
           </button>
           <a className={styles.link} href={REPO} target="_blank" rel="noreferrer">
             GitHub

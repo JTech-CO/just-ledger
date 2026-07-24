@@ -12,27 +12,29 @@ import {
   computeBalances,
   periodTotals,
 } from '../ledgerCore.js';
-import { DEMO_ACCOUNTS, buildDemoTxns } from './seed.js';
+import { PROFILES } from './seed.js';
 
 export { LedgerError as ApiError };
 
-const DEFAULT_ROWS = 1500;
-
-let accounts = DEMO_ACCOUNTS.map((a) => ({ ...a }));
-let txns = buildDemoTxns(DEFAULT_ROWS);
+let profile = 'household';
+let accounts = PROFILES.household.accounts.map((a) => ({ ...a }));
+let txns = PROFILES.household.build(PROFILES.household.defaultRows);
 let seq = 0;
 
 /** 데모에는 오리진이 없다 — 호환을 위한 no-op */
 export function setApiBase() {}
 
-/** 행 수를 바꿔 다시 시드한다 (가상 스크롤 시연용) */
-export function setDemoRowTarget(n) {
-  txns = buildDemoTxns(n);
+/** 데모 프로파일 전환 — 계정·거래를 통째로 갈아끼운다(가계 ↔ 회사). */
+export function setDemoProfile(name) {
+  const p = PROFILES[name] ?? PROFILES.household;
+  profile = PROFILES[name] ? name : 'household';
+  accounts = p.accounts.map((a) => ({ ...a }));
+  txns = p.build(p.defaultRows);
 }
 
-/** 현재 데모 행 수 */
-export function demoRowCount() {
-  return txns.length;
+/** 현재 프로파일 이름 */
+export function demoProfile() {
+  return profile;
 }
 
 const ok = (v) => Promise.resolve(v);
