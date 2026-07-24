@@ -32,12 +32,13 @@ export default function BalanceSummary({ accountName }) {
       <h2 className={styles.title}>잔액</h2>
       <ul className={styles.list}>
         {[...balances.entries()].map(([key, minor]) => {
-          const [accountId, currency] = key.split(':');
+          const accountId = key.slice(0, key.lastIndexOf(':'));
           const flash = flashKeys.has(key);
           return (
             <li key={key} className={`${styles.row} ${flash ? styles.flash : ''}`}>
               <span className={styles.name}>{accountName.get(accountId) ?? accountId}</span>
-              <Money minor={minor} currency={currency} signed />
+              {/* 모두 원화이므로 기호(₩)는 붙이지 않고, 부호로 색을 준다(양수 초록·음수 빨강) */}
+              <Money minor={minor} tone="signed" signed />
             </li>
           );
         })}

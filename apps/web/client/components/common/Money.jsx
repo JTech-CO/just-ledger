@@ -12,16 +12,21 @@ const SYMBOL = { KRW: '₩', USD: '$', JPY: '¥', EUR: '€' };
  * @param {object} props
  * @param {string} props.minor  moneyMinor 문자열
  * @param {string} [props.currency]  통화 코드 (기호 표시)
- * @param {'debit'|'credit'|'neutral'} [props.tone='neutral']
- *   차변(자산↑)=positive, 대변(지출↑)=negative 색. neutral 은 색 없음.
+ * @param {'debit'|'credit'|'signed'|'neutral'} [props.tone='neutral']
+ *   debit=positive(초록), credit=negative(빨강). signed 는 값의 부호로 색을
+ *   정한다(양수 초록·음수 빨강·0 무색 — 잔액 표시용). neutral 은 색 없음.
  * @param {boolean} [props.signed=false]  부호를 명시 표기(합계·증감 표시)
  */
 export default function Money({ minor, currency, tone = 'neutral', signed = false }) {
-  const toneClass =
-    tone === 'debit' ? styles.debit : tone === 'credit' ? styles.credit : '';
   const negative = typeof minor === 'string' && minor.startsWith('-');
-  // 부호: 음수는 항상 '−', signed 이면 양수도 '+' (색과 무관하게 방향을 드러낸다)
-  const sign = negative ? '−' : signed ? '+' : '';
+  const zero = minor === '0';
+  let toneClass = '';
+  if (tone === 'debit') toneClass = styles.debit;
+  else if (tone === 'credit') toneClass = styles.credit;
+  else if (tone === 'signed') toneClass = zero ? '' : negative ? styles.credit : styles.debit;
+  // 부호: 음수는 항상 '−', signed 이면 양수도 '+' (색과 무관하게 방향을 드러낸다).
+  // 0 은 부호를 붙이지 않는다.
+  const sign = negative ? '−' : signed && !zero ? '+' : '';
   const body = formatMinor(negative ? minor.slice(1) : minor);
 
   return (
