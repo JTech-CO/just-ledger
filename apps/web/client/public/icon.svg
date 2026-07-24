@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="just-ledger">
+  <!-- full-bleed 배경 (maskable 안전) -->
+  <rect width="512" height="512" fill="#14506B"/>
+  <!-- 복식부기 = 균형: 두 줄과 등호. 중앙 60% 안에 배치(maskable safe zone) -->
+  <g fill="none" stroke="#F6F7F8" stroke-width="26" stroke-linecap="round">
+    <line x1="150" y1="205" x2="362" y2="205"/>
+    <line x1="150" y1="307" x2="362" y2="307"/>
+  </g>
+  <!-- 차변|대변 구분 컬럼 힌트 -->
+  <line x1="256" y1="150" x2="256" y2="362" stroke="#57A8C4" stroke-width="14" stroke-linecap="round"/>
+</svg>

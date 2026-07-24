@@ -12,10 +12,11 @@
     "gen:types": "node scripts/gen-typedefs.mjs",
     "build": "node scripts/gen-typedefs.mjs && vite build",
     "build:demo": "vite build --mode demo",
+    "build:app": "vite build --mode app",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,jsx,mjs,css,json}\" --log-level warn",
     "test:api": "vitest run tests/api.test.js tests/ingest.test.js",
-    "test:ui": "vitest run tests/money.test.js tests/ui.test.jsx tests/virtual.test.jsx tests/socket.test.js",
+    "test:ui": "vitest run tests/money.test.js tests/ui.test.jsx tests/virtual.test.jsx tests/socket.test.js tests/ledgerCore.test.js",
     "test:a11y": "vitest run tests/a11y.test.jsx tests/responsive.test.jsx"
   },
   "dependencies": {

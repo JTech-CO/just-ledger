@@ -1,0 +1,144 @@
+/* 로컬 앱 셸. 색은 전부 토큰 — 하드코딩 hex 없음 (디자인 백서 §5.3). */
+
+.appRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.barMain {
+  flex: 1;
+  min-width: 280px;
+}
+
+.line {
+  margin: 0 0 var(--sp-1);
+  max-width: 92ch;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.line strong {
+  color: var(--text);
+}
+
+.link {
+  color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.primaryBtn {
+  color: var(--surface);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.hiddenFile {
+  display: none;
+}
+
+.firstRun {
+  padding: var(--sp-2) var(--sp-4);
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.linkBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.toast {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--row-hover);
+  border-bottom: 1px solid var(--border);
+  animation: toastFade 4s forwards;
+}
+
+@keyframes toastFade {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 모션 최소화 설정 — 즉시 사라지되 애니메이션 이벤트는 발생시킨다(정리용) */
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation-duration: 4s;
+    animation-name: toastHoldReduced;
+  }
+  @keyframes toastHoldReduced {
+    0%,
+    100% {
+      opacity: 1;
+    }
+  }
+}
+
+.appSlot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.appSlot > * {
+  flex: 1;
+  height: 100% !important;
+  min-height: 0;
+}
+
+/* 명세서 자리 안내 패널 (LocalIngestPanel) */
+.infoPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: var(--sp-4);
+}
+
+.infoTitle {
+  margin: 0 0 var(--sp-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.infoBody {
+  margin: 0;
+  max-width: 70ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}

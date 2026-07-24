@@ -1,0 +1,17 @@
+{
+  "id": "just-ledger-local",
+  "name": "just-ledger (로컬 원장)",
+  "short_name": "just-ledger",
+  "description": "오프라인 복식부기 개인 원장. 데이터는 이 기기에만 저장됩니다.",
+  "lang": "ko",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F6F7F8",
+  "theme_color": "#14506B",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
