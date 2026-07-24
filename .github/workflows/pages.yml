@@ -42,17 +42,23 @@ jobs:
           cache-dependency-path: apps/web/pnpm-lock.yaml
       - name: 의존성 설치
         run: cd apps/web && pnpm install --frozen-lockfile
-      - name: 데모 빌드 (mock 어댑터)
-        run: cd apps/web && pnpm build:demo
-      - name: 산출물 점검 — 데모에 서버 의존이 남지 않았는지
+      - name: 데모·앱 빌드 (mock/local 어댑터)
+        # build:demo 가 dist 루트(/just-ledger/, 체험)를 먼저 비우고 채운 뒤,
+        # build:app 이 dist/app(/just-ledger/app/, 설치형 PWA·IndexedDB)을 채운다.
+        run: |
+          cd apps/web
+          pnpm build:demo
+          pnpm build:app
+      - name: 산출물 점검 — 서버 의존이 남지 않았는지
         run: |
           cd apps/web/dist
-          test -f index.html
-          # base 가 /just-ledger/ 로 주입됐는지
-          grep -q '/just-ledger/assets/' index.html
-          # 목으로 교체된 경로가 번들에 남아 있으면 실패 (WebSocket 재접속·wasm 로드)
-          ! grep -rq 'statement_wasm' assets/ || (echo '번들에 wasm 참조가 남아 있습니다' && exit 1)
-          ! grep -rq 'new WebSocket' assets/ || (echo '번들에 WebSocket 접속이 남아 있습니다' && exit 1)
+          test -f index.html && grep -q '/just-ledger/assets/' index.html
+          test -f app/index.html && grep -q '/just-ledger/app/assets/' app/index.html
+          # PWA 필수 자산
+          test -f app/manifest.webmanifest && test -f app/sw.js && test -f app/icon.svg
+          # 목/로컬로 교체된 경로가 번들에 남아 있으면 실패 (WebSocket 재접속·wasm 로드)
+          ! grep -rq 'statement_wasm' assets/ app/assets/ || (echo '번들에 wasm 참조가 남아 있습니다' && exit 1)
+          ! grep -rq 'new WebSocket' assets/ app/assets/ || (echo '번들에 WebSocket 접속이 남아 있습니다' && exit 1)
       - uses: actions/upload-pages-artifact@v3
         with: { path: apps/web/dist }
 
