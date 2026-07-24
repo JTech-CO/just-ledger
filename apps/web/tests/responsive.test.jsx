@@ -53,6 +53,17 @@ describe('반응형 브레이크포인트 (§4.2)', () => {
     expect(wrapRule[0]).toMatch(/flex:\s*\d/);
   });
 
+  // 회귀: 모든 셀이 <span> 이라 :last-of-type/:nth-of-type 로는 금액 칸을 못 고른다
+  // (마지막 span 은 편집칸). 그러면 차변·대변이 같은 그리드 컬럼에 겹쳐 세로로 포개진다.
+  // 전용 클래스(debitCol/creditCol)로 서로 다른 컬럼에 못 박는다.
+  it('차변·대변은 전용 클래스로 서로 다른 컬럼에 놓인다 — 금액 겹침 방지', () => {
+    const css = read('components/ledger/LedgerTable.module.css');
+    expect(css).toMatch(/\.debitCol\s*\{[^}]*grid-column:\s*debit/);
+    expect(css).toMatch(/\.creditCol\s*\{[^}]*grid-column:\s*credit/);
+    // type 기반 선택자로 금액 컬럼을 배치하면 안 된다(재발 방지)
+    expect(css).not.toMatch(/\.colAmount:(?:last-of-type|nth-of-type)/);
+  });
+
   it('금액 컬럼은 어떤 브레이크포인트에서도 숨기지 않는다 (§4.2)', () => {
     const css = read('components/ledger/LedgerTable.module.css');
     // colAmount 에 display:none 이 붙는 규칙이 없어야 한다

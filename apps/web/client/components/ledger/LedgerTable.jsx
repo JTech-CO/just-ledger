@@ -60,8 +60,8 @@ export default function LedgerTable({ rows, accountName, activeIndex, onSelect, 
         <span role="columnheader" className={styles.colMemo}>적요</span>
         <span role="columnheader" className={styles.colCounter}>상대처</span>
         <span role="columnheader" className={styles.colAccount}>계정</span>
-        <span role="columnheader" className={`${styles.colAmount} ${styles.amountHead}`}>차변</span>
-        <span role="columnheader" className={`${styles.colAmount} ${styles.amountHead}`}>대변</span>
+        <span role="columnheader" className={`${styles.colAmount} ${styles.debitCol} ${styles.amountHead}`}>차변</span>
+        <span role="columnheader" className={`${styles.colAmount} ${styles.creditCol} ${styles.amountHead}`}>대변</span>
         <span role="columnheader" className={styles.colEdit} />
       </div>
 
@@ -138,10 +138,10 @@ export const Row = forwardRef(function Row(
       <span role="cell" className={`${styles.colAccount} muted`}>
         {txn.entries?.length ?? 0}개 분개
       </span>
-      <span role="cell" className={styles.colAmount}>
+      <span role="cell" className={`${styles.colAmount} ${styles.debitCol}`}>
         {sums ? <Money minor={sums.debit} tone="debit" /> : <span className="negative">오류</span>}
       </span>
-      <span role="cell" className={styles.colAmount}>
+      <span role="cell" className={`${styles.colAmount} ${styles.creditCol}`}>
         {sums ? <Money minor={sums.credit} tone="credit" /> : null}
       </span>
       <span role="cell" className={styles.colEdit}>

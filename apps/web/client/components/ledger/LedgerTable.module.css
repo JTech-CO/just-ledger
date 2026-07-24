@@ -95,13 +95,14 @@
 .colMemo { grid-column: memo; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .colCounter { grid-column: counter; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .colAccount { grid-column: account; font-size: 12px; }
-.colAmount { grid-column: debit; text-align: right; justify-self: end; }
-.colAmount:last-of-type { grid-column: credit; }
+/* 차변·대변은 전용 클래스로 각 컬럼에 못 박는다. 모든 셀이 <span> 이라
+   :last-of-type/:nth-of-type 로는 금액 칸을 못 고른다(마지막 span 은 편집칸) —
+   그러면 두 금액이 같은 칸에 겹친다(세로로 포개짐). */
+.colAmount { text-align: right; justify-self: end; }
+.debitCol { grid-column: debit; }
+.creditCol { grid-column: credit; }
 .amountHead { text-align: right; justify-self: end; }
 .colEdit { grid-column: edit; justify-self: center; }
-
-.head .colAmount:nth-of-type(1) { grid-column: debit; }
-.head .colAmount:nth-of-type(2) { grid-column: credit; }
 
 .editBtn {
   display: inline-flex;
@@ -166,6 +167,6 @@
   .colCounter,
   .colAccount,
   .colEdit { display: none; }
-  .colAmount { grid-area: debit; }
-  .colAmount:last-of-type { grid-area: credit; }
+  .debitCol { grid-area: debit; }
+  .creditCol { grid-area: credit; }
 }
