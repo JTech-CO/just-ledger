@@ -13,8 +13,6 @@ import { useLedgerStore } from '../../store/ledgerStore.js';
 import { isEmpty, seedSample, exportData, importData, resetData } from './localApi.js';
 import styles from './LocalApp.module.css';
 
-const REPO = 'https://github.com/JTech-CO/just-ledger';
-
 export default function LocalApp() {
   const [installEvt, setInstallEvt] = useState(null);
   const [empty, setEmpty] = useState(false);
@@ -106,19 +104,7 @@ export default function LocalApp() {
   return (
     <div className={styles.appRoot}>
       <header className={styles.bar}>
-        <div className={styles.barMain}>
-          <p className={styles.line}>
-            <strong>로컬 앱</strong> — 데이터는 <strong>이 기기의 브라우저에만</strong> 저장됩니다(서버·동기화 없음).
-            기기를 바꾸거나 브라우저 데이터를 지우면 사라지니, 내보내기로 백업하세요.
-          </p>
-          <p className={styles.line}>
-            복식부기(차변=대변)는 이 앱 안에서 검사합니다. 다만 마감 정합성(COBOL)·자동 분류(Prolog)·다중
-            사용자는 서버판 기능이라 여기서는 동작하지 않습니다.{' '}
-            <a className={styles.link} href={REPO} target="_blank" rel="noreferrer">
-              전체 스택
-            </a>
-          </p>
-        </div>
+        <p className={styles.line}>이 기기에만 저장됩니다. 백업은 내보내기.</p>
         <div className={styles.actions}>
           {installEvt && (
             <button type="button" className={styles.primaryBtn} onClick={onInstall}>
@@ -140,11 +126,11 @@ export default function LocalApp() {
 
       {empty && (
         <div className={styles.firstRun} role="note">
-          <span>빈 장부입니다. 왼쪽에서 계정을 만들고 아래에서 거래를 입력하거나, </span>
+          <span>빈 장부입니다. 거래를 입력하거나 </span>
           <button type="button" className={styles.linkBtn} onClick={onSeed}>
-            샘플 데이터로 둘러보기
+            샘플 데이터로 시작
           </button>
-          <span>를 눌러 시작하세요.</span>
+          <span>하세요.</span>
         </div>
       )}
 

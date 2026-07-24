@@ -1,23 +1,6 @@
-/* 데모 안내 패널(명세서 가져오기 대체). 색은 전부 토큰. */
-
-.notice {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: var(--sp-4);
-}
-
-.title {
-  margin: 0 0 var(--sp-2);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.body {
+/* 데모 명세서 자리 안내 — 한 줄. 색은 토큰만. */
+.line {
   margin: 0;
-  max-width: 70ch;
   font-size: 13px;
-  line-height: 1.6;
   color: var(--text-muted);
 }

@@ -22,17 +22,20 @@
 }
 
 .banner {
-  border-bottom: 1px solid var(--border-strong);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  padding: var(--sp-3) var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
   font-size: 13px;
-  line-height: 1.5;
 }
 
 .line {
-  margin: 0 0 var(--sp-1);
-  max-width: 90ch;
+  margin: 0;
   color: var(--text-muted);
 }
 
@@ -41,18 +44,12 @@
 }
 
 .link {
-  color: var(--accent);
+  color: var(--text-muted);
+  align-self: center;
 }
 
 .controls {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-2);
-  margin: var(--sp-2) 0 0;
-}
-
-.rowsLabel {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
 }

@@ -32,26 +32,19 @@ export default function DemoApp() {
     <div className={styles.demoRoot}>
       <aside className={styles.banner} role="note">
         <p className={styles.line}>
-          <strong>데모</strong> — 브라우저 안에서만 도는 <strong>모의 데이터</strong>입니다. 실제 서버·데이터베이스에
-          연결되어 있지 않으며, 입력한 내용은 새로고침하면 사라집니다.
+          <strong>데모</strong> · 모의 데이터입니다. 새로고침하면 초기화됩니다.
         </p>
-        <p className={styles.line}>
-          복식부기 강제·마감 정합성·자동 분류는 서버(PostgreSQL 트리거·COBOL·Prolog)에서 동작하므로 이 화면에서는
-          확인할 수 없습니다. 전체 스택은{' '}
-          <a className={styles.link} href={REPO} target="_blank" rel="noreferrer">
-            저장소
-          </a>
-          에서 직접 띄울 수 있습니다.
-        </p>
-        <p className={styles.controls}>
-          <span className={styles.rowsLabel}>표시 중인 거래 {rows.toLocaleString('ko-KR')}건</span>
+        <div className={styles.controls}>
           <button type="button" onClick={() => reseed(1500)} disabled={busy || rows === 1500}>
             1,500건
           </button>
           <button type="button" onClick={() => reseed(100000)} disabled={busy || rows === 100000}>
-            10만건 부하 걸기
+            10만건
           </button>
-        </p>
+          <a className={styles.link} href={REPO} target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+        </div>
       </aside>
       <div className={styles.appSlot}>
         <LedgerPage />

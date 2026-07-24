@@ -9,34 +9,19 @@
 .bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
-  border-bottom: 1px solid var(--border-strong);
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
 }
 
-.barMain {
-  flex: 1;
-  min-width: 280px;
-}
-
 .line {
-  margin: 0 0 var(--sp-1);
-  max-width: 92ch;
+  margin: 0;
   font-size: 13px;
-  line-height: 1.5;
   color: var(--text-muted);
-}
-
-.line strong {
-  color: var(--text);
-}
-
-.link {
-  color: var(--accent);
 }
 
 .actions {
@@ -120,25 +105,9 @@
   min-height: 0;
 }
 
-/* 명세서 자리 안내 패널 (LocalIngestPanel) */
-.infoPanel {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: var(--sp-4);
-}
-
-.infoTitle {
-  margin: 0 0 var(--sp-2);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.infoBody {
+/* 명세서 자리 안내 (LocalIngestPanel) — 한 줄 */
+.infoLine {
   margin: 0;
-  max-width: 70ch;
   font-size: 13px;
-  line-height: 1.6;
   color: var(--text-muted);
 }
